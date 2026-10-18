@@ -1,0 +1,24 @@
+{
+  "id": "ridonculous-daily-quest",
+  "name": "Daily Quest",
+  "version": "0.3.0",
+  "description": "A little courage for today: one challenge, one small win, a buff, and a break.",
+  "manifestVersion": 1,
+  "minSupVersion": "19.2.0",
+  "iFrame": true,
+  "uiKit": true,
+  "icon": "icon.svg",
+  "hooks": [
+    "taskComplete",
+    "taskUpdate",
+    "taskDelete",
+    "currentTaskChange"
+  ],
+  "permissions": [
+    "getTasks",
+    "updateTask",
+    "dispatchAction",
+    "persistDataSynced",
+    "loadSyncedData"
+  ]
+}

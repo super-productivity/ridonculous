@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily Quest</title>
+<!-- Super Productivity styles controls; the map tints itself from the host theme so it also works in dark mode. -->
+<style>
+html { background: var(--bg, #f6f7f4); }
+body { container-type: inline-size; box-sizing: border-box; margin: 0 auto; max-width: 1400px; padding: var(--s2, 16px); background: var(--bg, #f6f7f4); color: var(--text-color, #222); font-family: var(--font-primary-stack, system-ui, sans-serif); }
+header { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: var(--s, 8px) var(--s2, 16px); margin-bottom: var(--s2, 16px); }
+header h1 { margin: 0 0 var(--s-half, 4px); }
+header p { margin: 0; }
+#progress { display: block; margin-top: var(--s-half, 4px); }
+.tools { display: flex; align-items: center; gap: var(--s, 8px); flex-wrap: wrap; }
+button { box-sizing: border-box; min-width: 0; min-height: 44px; white-space: normal; overflow-wrap: anywhere; }
+button:focus-visible, [role="option"]:focus-visible { outline: 2px solid var(--c-primary, Highlight); outline-offset: 3px; }
+#status { display: flex; align-items: center; justify-content: space-between; gap: var(--s2, 16px); margin-bottom: var(--s2, 16px); }
+#status-message { min-width: 0; overflow-wrap: anywhere; }
+#dismiss-status { flex-shrink: 0; }
+[hidden] { display: none !important; }
+
+/* Map */
+.map { --land-tint: var(--bg, #f6f7f4); position: relative; isolation: isolate; width: 100%; min-width: 0; aspect-ratio: 2 / 3; min-height: 520px; border-radius: var(--card-border-radius, 8px); border: 1px solid var(--divider-color, #ddd); background: color-mix(in srgb, #d8c89a 12%, var(--land-tint)); }
+.landscape, .trails { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+/* The map lets the detail card hang past its edge; only the artwork is clipped. */
+.landscape { border-radius: inherit; }
+.land { fill: color-mix(in srgb, #6a9c70 24%, var(--land-tint)); }
+.water { stroke: color-mix(in srgb, #3d9ad9 30%, var(--land-tint)); }
+.peak { fill: color-mix(in srgb, var(--text-color, #222) 10%, var(--land-tint)); }
+.peak-shade { fill: color-mix(in srgb, var(--text-color, #222) 17%, var(--land-tint)); }
+.crown { fill: color-mix(in srgb, #3f7a4d 48%, var(--land-tint)); }
+.trunk, .bridge { stroke: color-mix(in srgb, var(--text-color, #222) 35%, var(--land-tint)); }
+.bridge { fill: color-mix(in srgb, #b08a5a 35%, var(--land-tint)); }
+.trails { color: var(--text-color-muted, #788397); }
+.trails .done { color: var(--color-success, #3c9a5f); }
+.trails .branch { opacity: .75; }
+/* Waypoints are the boss's subtasks, strung along the trail to it. */
+.waypoints { position: absolute; inset: 0; pointer-events: none; }
+.waypoint { position: absolute; width: 16px; height: 16px; box-sizing: border-box; border-radius: 50%; border: 2px solid var(--text-color-muted, #888); background: var(--card-bg, #fff); transform: translate(-50%, -50%); pointer-events: auto; cursor: pointer; }
+.waypoint[data-status="next"] { border-color: var(--c-primary, #1683fa); }
+.waypoint[data-status="active"] { border-color: var(--c-primary, #1683fa); background: var(--c-primary, #1683fa); animation: pulse 2s ease-out infinite; }
+.waypoint[data-status="complete"] { border-color: var(--color-success, #3c9a5f); background: var(--color-success, #3c9a5f); }
+/* The stop layer covers the map; only the stops themselves take clicks so waypoints stay reachable. */
+.stops { position: absolute; inset: 0; margin: 0; padding: 0; list-style: none; pointer-events: none; }
+.stops li { pointer-events: auto; }
+.stops li { --orb: 56px; --w: min(8.5rem, 40cqw); position: absolute; width: var(--w); left: clamp(calc(var(--w) / 2), var(--x), calc(100% - var(--w) / 2)); top: var(--y); transform: translate(-50%, calc(var(--orb) / -2)); }
+.stops li[data-role="boss"] { --orb: 72px; }
+.stops li[data-role="side"] { --orb: 48px; }
+/* Portrait route for narrow panels; the landscape route below follows the artwork. */
+[data-role="buff"] { --x: 26%; --y: 10%; }
+[data-role="side"] { --x: 76%; --y: 30%; }
+[data-role="boss"] { --x: 34%; --y: 58%; }
+[data-role="recovery"] { --x: 72%; --y: 84%; }
+.stop { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; min-height: 0; padding: 0; border: 0; background: none; color: inherit; text-align: center; cursor: pointer; }
+.stop:hover, .stop:active { background: none; filter: none; }
+.orb { position: relative; display: grid; place-items: center; width: var(--orb); height: var(--orb); border-radius: 50%; border: 2px dashed var(--text-color-muted, #888); background: var(--card-bg, #fff); color: var(--text-color-muted, #888); box-shadow: var(--whiteframe-shadow-2dp, 0 2px 6px rgb(0 0 0 / .18)); transition: transform .15s ease, box-shadow .15s ease; }
+.stop:hover .orb { transform: translateY(-2px) scale(1.04); border-color: var(--c-primary, #1683fa); }
+.stop[aria-expanded="true"] .orb { box-shadow: 0 0 0 4px var(--bg, #fff), 0 0 0 7px var(--c-primary, #1683fa); }
+.stop[data-status="chosen"] .orb { border: 2px solid var(--c-primary, #1683fa); color: var(--c-primary, #1683fa); }
+.stop[data-status="active"] .orb { border: 2px solid var(--c-primary, #1683fa); background: var(--c-primary, #1683fa); color: #fff; animation: pulse 2s ease-out infinite; }
+.stop[data-status="complete"] .orb { border: 2px solid var(--color-success, #3c9a5f); background: var(--color-success, #3c9a5f); color: #fff; }
+.stop[data-status="complete"] .orb::after { content: "✓"; position: absolute; top: -4px; right: -4px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--card-bg, #fff); color: var(--color-success, #3c9a5f); font-size: 13px; font-weight: 700; box-shadow: 0 1px 3px rgb(0 0 0 / .25); }
+.step.count { left: auto; right: -4px; top: -4px; bottom: auto; background: var(--c-primary, #1683fa); color: #fff; }
+.step { position: absolute; bottom: -4px; left: -4px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--text-color, #222); color: var(--bg, #fff); font-size: 11px; font-weight: 700; }
+.stop-label { display: flex; flex-direction: column; max-width: 100%; padding: 2px 8px; border-radius: 8px; background: color-mix(in srgb, var(--card-bg, #fff) 85%, transparent); }
+.stop-label strong { font-size: .95em; }
+.stop-value { max-width: 100%; font-size: .85em; color: var(--text-color-muted, #666); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.quest-icon { width: 55%; height: 55%; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+/* A short burst when the boss falls; the trail to Recovery lights up at the same time. */
+.stop.victory .orb { animation: victory .9s ease-out; }
+@keyframes victory { 0% { transform: scale(1); box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-success, #3c9a5f) 70%, transparent); } 35% { transform: scale(1.18); } 100% { transform: scale(1); box-shadow: 0 0 0 28px transparent; } }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--c-primary, #1683fa) 55%, transparent); } 100% { box-shadow: 0 0 0 16px transparent; } }
+@media (prefers-reduced-motion: reduce) { .orb, .stop.victory .orb, .panel, .waypoint { transition: none; animation: none !important; } }
+
+/* Detail card */
+.panel { position: absolute; z-index: 2; box-sizing: border-box; max-width: calc(100% - 24px); margin: 0; box-shadow: 0 10px 32px rgb(0 0 0 / .24); animation: pop .16s ease-out; }
+#detail { display: flex; flex-direction: column; gap: 12px; }
+@keyframes pop { from { opacity: 0; transform: translateY(6px) scale(.98); } }
+.panel h2, .panel p { margin: 0; }
+.detail-head { display: flex; align-items: center; gap: 12px; }
+.detail-head > div { flex: 1; min-width: 0; }
+.detail-head .orb { --orb: 48px; flex: 0 0 auto; border-style: solid; border-color: var(--c-primary, #1683fa); color: var(--c-primary, #1683fa); box-shadow: none; }
+#close-detail { flex: 0 0 auto; width: 44px; padding: 0; font-size: 1.4em; line-height: 1; }
+.slot { display: flex; align-items: center; justify-content: space-between; gap: var(--s, 8px); width: 100%; padding: 12px var(--s2, 16px); text-align: left; }
+.slot[data-empty="true"] { border: 2px dashed var(--c-primary, #1683fa); color: var(--c-primary, #1683fa); font-weight: 600; }
+.slot-text { flex: 1; min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; overflow-wrap: anywhere; }
+.slot-cta { flex: 0 0 auto; font-size: .85em; color: var(--c-primary, #1683fa); }
+#act { align-self: flex-start; max-width: 100%; }
+.rows { display: grid; gap: 4px; max-height: 220px; overflow-y: auto; margin: 0; padding: 2px; list-style: none; }
+.row { display: flex; align-items: center; gap: var(--s, 8px); width: 100%; min-height: 40px; padding: 6px 10px; text-align: left; }
+.row:disabled { opacity: 1; }
+.camp-item { display: flex; align-items: center; gap: var(--s, 8px); min-width: 0; padding: 2px 2px 2px 10px; border: 1px solid var(--divider-color, #ddd); border-radius: var(--card-border-radius, 8px); }
+.camp-item button { flex: 0 0 auto; min-height: 36px; }
+.camp-item[data-status="active"] > button:not(.remove) { opacity: 1; border-color: var(--c-primary, #1683fa); color: var(--c-primary, #1683fa); }
+.camp-item .remove { width: 36px; padding: 0; font-size: 1.2em; }
+.row-title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.mark { flex: 0 0 1.2em; text-align: center; color: var(--text-color-muted, #888); }
+[data-status="active"] > .mark { color: var(--c-primary, #1683fa); }
+[data-status="complete"] > .mark { color: var(--color-success, #3c9a5f); font-weight: 700; }
+[data-status="complete"] > .row-title { color: var(--text-color-muted, #888); text-decoration: line-through; }
+/* Running and done are states, not actions: shown at full strength instead of a faded button. */
+#act[data-state="active"] { background: transparent; border: 1px solid var(--c-primary, #1683fa); color: var(--c-primary, #1683fa); opacity: 1; }
+#act[data-state="complete"] { background: var(--color-success, #3c9a5f); border-color: var(--color-success, #3c9a5f); opacity: 1; }
+
+/* Picker */
+dialog { width: min(560px, calc(100% - 32px)); max-height: 85dvh; padding: 0; color: var(--text-color, #222); background: var(--card-bg, Canvas); }
+dialog::backdrop { background: rgb(0 0 0 / .45); }
+#picker-form { display: flex; flex-direction: column; max-height: 85dvh; padding: var(--s2, 16px); box-sizing: border-box; }
+.picker-head h2 { margin: 0 0 var(--s-half, 4px); }
+.picker-head p { margin: 0 0 var(--s2, 16px); }
+.picker-body { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+input { box-sizing: border-box; width: 100%; min-width: 0; min-height: 44px; }
+#task-mode { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+#task-count { margin: var(--s, 8px) 0 0; font-size: .85em; }
+#task-choice { min-height: 0; overflow-y: auto; margin: var(--s, 8px) 0 0; padding: 4px; list-style: none; display: grid; gap: 4px; align-content: start; }
+[role="option"] { display: flex; align-items: center; gap: var(--s, 8px); min-height: 44px; padding: 8px 12px; border-radius: var(--card-border-radius, 8px); border: 1px solid transparent; cursor: pointer; }
+[role="option"][aria-selected="true"] { background: var(--select-hover-bg, rgb(0 0 0 / .06)); border-color: var(--c-primary, #1683fa); }
+.option-text { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-wrap: anywhere; }
+.option-meta { font-size: .85em; color: var(--text-color-muted, #666); }
+.option-check { flex: 0 0 auto; color: var(--c-primary, #1683fa); font-weight: 700; }
+mark { background: color-mix(in srgb, var(--c-primary, #1683fa) 25%, transparent); color: inherit; border-radius: 2px; }
+#task-empty { margin: var(--s2, 16px) 0; }
+#ritual-mode { min-height: 0; overflow-y: auto; padding: 4px; margin: -4px; }
+.suggestions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s, 8px); margin: 0 0 var(--s2, 16px); }
+.suggestions button { text-align: left; }
+.suggestions button[aria-pressed="true"] { border-color: var(--c-primary, #1683fa); color: var(--c-primary, #1683fa); }
+#ritual-note { margin: var(--s, 8px) 0 0; font-size: .9em; }
+#picker-error { margin: var(--s, 8px) 0 0; color: var(--c-warn, #b00020); }
+#picker-error:empty { display: none; }
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--s, 8px); padding-top: var(--s2, 16px); flex-shrink: 0; }
+
+@container (min-width: 560px) {
+ .map { aspect-ratio: 1200 / 760; min-height: 340px; }
+ [data-role="buff"] { --x: 12%; --y: 28%; }
+ [data-role="side"] { --x: 36%; --y: 76%; }
+ [data-role="boss"] { --x: 64%; --y: 28%; }
+ [data-role="recovery"] { --x: 87%; --y: 66%; }
+}
+@media (max-width: 600px) {
+ dialog { width: 100%; max-width: 100%; margin: auto 0 0; border-radius: 16px 16px 0 0; }
+}
+@media (max-width: 360px) { .suggestions { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<header>
+ <div><h1>Daily Quest</h1><p class="text-muted">A little courage for today.</p><small class="text-muted" id="progress" aria-live="polite">Loading your map…</small></div>
+ <div class="tools"><span id="demo" class="text-muted" hidden>Demo mode</span></div>
+</header>
+<div id="status" class="card" hidden><span id="status-message" role="status" aria-live="polite"></span><button id="dismiss-status" aria-label="Dismiss message">Dismiss</button></div>
+<main class="map" aria-label="Your daily adventure map">
+<svg class="landscape" viewBox="0 0 1200 760" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+<defs>
+ <g id="tree"><path class="trunk" d="M0 0v19" stroke-width="2"/><path class="crown" d="M-10 4 0-30 10 4Q0 8-10 4"/></g>
+ <g id="mountain"><path class="peak" d="M-85 60 0-65 88 60Q20 67-85 60"/><path class="peak-shade" d="M0-65 18 3 88 60H40L-5 0Z"/></g>
+</defs>
+<g class="land">
+ <path d="M0 130C80 130 90 195 170 190S230 280 170 272 100 230 58 270 45 330 150 350 300 388 255 420 230 500 145 480 100 448 58 480 0 497 0 497Z"/>
+ <path d="M190 110C360 96 285 175 402 152S490 103 560 125 570 178 605 211 630 283 570 282 561 340 504 321 520 269 455 274 442 225 388 223 370 183 320 175Z"/>
+ <path d="M717 295C740 257 813 266 835 300S897 308 928 347 900 418 849 403 825 356 777 355 669 358 689 327Z"/>
+ <path d="M1200 324C1120 296 1135 353 1077 366S1037 392 993 418 942 471 1016 478 1026 520 1111 500 1200 494 1200 494Z"/>
+ <path d="M0 572C85 500 110 517 192 525S293 584 218 575 154 613 130 640 189 684 131 713 0 714 0 714Z"/>
+ <path d="M372 551C486 520 531 537 544 580S549 634 592 656 647 726 536 730 368 742 330 713 420 692 370 638 305 577 372 551Z"/>
+ <path d="M846 582C901 541 921 599 987 590S1067 608 1093 630 1197 660 1133 692 1045 714 983 695 916 646 867 630 801 608 846 582Z"/>
+</g>
+<path id="river-path" d="M100 104C141 150 247 102 266 204S280 261 359 313 390 383 488 412M510 456C525 545 592 496 594 580S704 613 724 686 760 745 791 796M598 568C800 530 666 627 839 650S864 725 1007 792" fill="none" class="water" stroke-width="34"/>
+<g id="mountains" opacity=".85"><use href="#mountain" transform="translate(755 150) scale(.72)"/><use href="#mountain" transform="translate(827 132)"/><use href="#mountain" transform="translate(684 176) scale(.5)"/><use href="#mountain" transform="translate(946 270) scale(1.2)"/><use href="#mountain" transform="translate(1030 270) scale(.85)"/><use href="#mountain" transform="translate(833 293) scale(.9)"/><use href="#mountain" transform="translate(886 324) scale(.7)"/></g>
+<g id="trees"><use href="#tree" transform="translate(52 218)"/><use href="#tree" transform="translate(108 203)"/><use href="#tree" transform="translate(157 236)"/><use href="#tree" transform="translate(24 354)"/><use href="#tree" transform="translate(52 399)"/><use href="#tree" transform="translate(96 430)"/><use href="#tree" transform="translate(146 402)"/><use href="#tree" transform="translate(190 444)"/><use href="#tree" transform="translate(370 215)"/><use href="#tree" transform="translate(408 236)"/><use href="#tree" transform="translate(453 124)"/><use href="#tree" transform="translate(482 153)"/><use href="#tree" transform="translate(509 190)"/><use href="#tree" transform="translate(544 185)"/><use href="#tree" transform="translate(566 227)"/><use href="#tree" transform="translate(592 205)"/><use href="#tree" transform="translate(511 295)"/><use href="#tree" transform="translate(757 296)"/><use href="#tree" transform="translate(836 343)"/><use href="#tree" transform="translate(898 378)"/><use href="#tree" transform="translate(1081 239)"/><use href="#tree" transform="translate(1103 265)"/><use href="#tree" transform="translate(991 405)"/><use href="#tree" transform="translate(1110 410)"/><use href="#tree" transform="translate(1144 392)"/><use href="#tree" transform="translate(1078 451)"/><use href="#tree" transform="translate(1102 470)"/><use href="#tree" transform="translate(1133 452)"/><use href="#tree" transform="translate(63 579)"/><use href="#tree" transform="translate(101 615)"/><use href="#tree" transform="translate(147 562)"/><use href="#tree" transform="translate(29 644)"/><use href="#tree" transform="translate(223 706)"/><use href="#tree" transform="translate(405 632)"/><use href="#tree" transform="translate(425 707)"/><use href="#tree" transform="translate(468 563)"/><use href="#tree" transform="translate(468 620)"/><use href="#tree" transform="translate(498 655)"/><use href="#tree" transform="translate(540 684)"/><use href="#tree" transform="translate(573 696)"/><use href="#tree" transform="translate(887 623)"/><use href="#tree" transform="translate(945 649)"/><use href="#tree" transform="translate(992 670)"/><use href="#tree" transform="translate(1018 638)"/><use href="#tree" transform="translate(1040 692)"/><use href="#tree" transform="translate(1064 663)"/></g>
+<g class="bridge" stroke-width="3" transform="translate(597 573) rotate(-12)"><path d="M-24-9H24V9H-24Z"/><path d="M-24-15V17M24-15V17M-23-3H23M-23 5H23"/></g>
+</svg>
+<svg class="trails" aria-hidden="true"></svg>
+<div class="waypoints" id="waypoints" aria-hidden="true"></div>
+<ul class="stops">
+ <li data-role="buff"><button class="stop" id="node-buff" aria-expanded="false" aria-controls="panel"><span class="orb"><svg class="quest-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M8 14H35V26a13 13 0 0 1-27 0ZM35 16h4a6 6 0 0 1 0 12h-4M8 40H37"/></svg><span class="step">1</span></span><span class="stop-label"><strong>Buff</strong><span class="stop-value"></span></span></button></li>
+ <li data-role="boss"><button class="stop" id="node-boss" aria-expanded="false" aria-controls="panel"><span class="orb"><svg class="quest-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M4 42 12 15 18 21 25 6 32 21 37 16 44 42Z"/><path d="M25 6V1L35 3 25 5M19 42V34a5 5 0 0 1 10 0v8"/></svg><span class="step">2</span></span><span class="stop-label"><strong>Final boss</strong><span class="stop-value"></span></span></button></li>
+ <li data-role="recovery"><button class="stop" id="node-recovery" aria-expanded="false" aria-controls="panel"><span class="orb"><svg class="quest-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 4c4 10-8 11-6 19 5-1 7-5 8-9 13 16 4 23-3 23-15 0-14-15-7-20M9 39l30 8M39 39 9 47"/></svg><span class="step">3</span></span><span class="stop-label"><strong>Recovery</strong><span class="stop-value"></span></span></button></li>
+ <li data-role="side"><button class="stop" id="node-side" aria-expanded="false" aria-controls="panel"><span class="orb"><svg class="quest-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M13 43V7M14 9c10-9 15 7 25 0l-7 11 7 9c-10 7-15-9-25 0"/></svg><span class="step count" hidden></span></span><span class="stop-label"><strong>Side quests</strong><span class="stop-value"></span></span></button></li>
+</ul>
+<aside class="card panel" id="panel" aria-label="Quest details" hidden>
+ <section id="detail" aria-labelledby="detail-title">
+  <div class="detail-head"><span class="orb" id="detail-icon"></span><div><small class="text-muted" id="detail-step"></small><h2 id="detail-title" tabindex="-1"></h2></div><button id="close-detail" aria-label="Back to route">×</button></div>
+  <button class="slot" id="choice" aria-haspopup="dialog"><span class="slot-text" id="choice-text"></span><span class="slot-cta" id="choice-cta" aria-hidden="true"></span></button>
+  <p class="text-muted" id="detail-hint"></p>
+  <small class="text-muted" id="steps-summary" hidden></small>
+  <ol class="rows" id="steps" aria-labelledby="steps-summary" hidden></ol>
+  <ul class="rows" id="camp" aria-label="Stashed side quests" hidden></ul>
+  <small class="text-muted" id="attempts" hidden></small>
+  <button class="btn-primary" id="act"></button>
+ </section>
+</aside>
+</main>
+<dialog class="card" id="picker" aria-labelledby="picker-title">
+<form id="picker-form">
+ <div class="picker-head"><h2 id="picker-title"></h2><p class="text-muted" id="picker-help"></p></div>
+ <div class="picker-body">
+  <div id="task-mode">
+   <input id="task-search" type="search" role="combobox" aria-label="Search tasks" aria-autocomplete="list" aria-expanded="true" aria-controls="task-choice" placeholder="Search tasks…" autocomplete="off">
+   <p class="text-muted" id="task-count" aria-live="polite"></p>
+   <ul id="task-choice" role="listbox" aria-label="Unfinished tasks"></ul>
+   <p class="text-muted" id="task-empty" hidden></p>
+  </div>
+  <div id="ritual-mode">
+   <div id="suggestions" class="suggestions" role="group" aria-label="Suggested activities"></div>
+   <label for="ritual">Or make it your own</label>
+   <input id="ritual" maxlength="100" autocomplete="off">
+   <p class="text-muted" id="ritual-note">Checking this off leaves your task timer running.</p>
+  </div>
+  <p id="picker-error" role="alert"></p>
+ </div>
+ <div class="actions"><button type="button" id="cancel">Cancel</button><button class="btn-primary" type="submit" id="save">Save</button></div>
+</form>
+</dialog>
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const demo = !window.PluginAPI && window.parent === window;
+const roles = {
+ buff: { label: 'Buff', empty: 'Choose a buff', hint: 'Something small that helps you begin.', action: 'Buff acquired', cheer: 'A little boost. You’ve got this.' },
+ boss: { label: 'Final boss', empty: 'Choose your challenge', hint: 'Pick the task you have been avoiding. You do not have to finish it today.', action: 'Face the boss' },
+ recovery: { label: 'Recovery', empty: 'Choose a break', hint: 'Rest is part of the adventure.', action: 'Take a breather', cheer: 'Take your time. The adventure can wait.' },
+ side: { label: 'Side quests', empty: 'Stash a task for later', hint: 'Things that can wait. None of them are needed today.' }
+};
+// The numbered main path. Side quests branch off it and are never required.
+const route = ['buff', 'boss', 'recovery'];
+const stops = Object.keys(roles);
+// v0.1 stored these defaults as if chosen. Saves without a version get them cleared on load.
+const legacyDefaults = { buff: 'Coffee + music', recovery: 'Walk outside' };
+const suggestions = {
+ buff: ['Coffee + music', 'Make a cup of tea', 'Put on a focus playlist', 'Clear your desk'],
+ recovery: ['Walk outside', 'Stretch for a minute', 'Get a glass of water', 'Rest your eyes']
+};
+let state = { version: 3, boss: null, side: [], buff: null, recovery: null, attempts: {}, rituals: {} };
+let tasks = [], currentId = null, selected = null, ready = false, busy = false, stale = false;
+let matches = [], activeIndex = -1;
+const demoTasks = [
+ { id: 'demo-boss', title: 'Untangle the sync architecture', isDone: false, tagIds: [], dueDay: dueToday(), timeEstimate: 5400000, subTaskIds: ['demo-step-1', 'demo-step-2', 'demo-step-3'] },
+ { id: 'demo-step-1', title: 'Sketch the current data flow', isDone: false, parentId: 'demo-boss', tagIds: [] },
+ { id: 'demo-step-2', title: 'List the conflict cases', isDone: false, parentId: 'demo-boss', tagIds: [] },
+ { id: 'demo-step-3', title: 'Pick one case and fix it', isDone: false, parentId: 'demo-boss', tagIds: [] },
+ { id: 'demo-side', title: 'Review one small PR', isDone: false, tagIds: [], dueDay: dueToday(), timeEstimate: 900000 },
+ { id: 'demo-third', title: 'Write down one ridiculous idea', isDone: false, tagIds: [] },
+ { id: 'demo-fourth', title: 'Reply to the hardware vendor', isDone: false, tagIds: [] }
+];
+const api = window.PluginAPI || (demo ? {
+ getTasks: async () => demoTasks,
+ loadSyncedData: async () => sessionStorage.getItem('daily-quest-demo'),
+ persistDataSynced: async (value) => sessionStorage.setItem('daily-quest-demo', value),
+ dispatchAction: async (action) => { currentId = action.id; },
+ updateTask: async (id, updates) => { Object.assign(demoTasks.find(task => task.id === id), updates); }
+} : null);
+$('demo').hidden = !demo;
+function notify(message) { $('status-message').textContent = message; $('status').hidden = !message; }
+$('dismiss-status').addEventListener('click', () => notify(''));
+function day() { const d = new Date(); return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; }
+// Super Productivity marks Today by a padded local dueDay (YYYY-MM-DD); TODAY is a virtual tag, never in tagIds.
+function dueToday() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+function isTask(role) { return role === 'boss' || role === 'side'; }
+function byId(id) { return id ? tasks.find(task => task.id === id) : undefined; }
+// Subtasks that are archived or deleted are simply not shown.
+function stepsFor(boss) { return (boss?.subTaskIds || []).map(byId).filter(Boolean); }
+// Finished quests stay on the map for the day they were done, then make room for new ones.
+function startOfToday() { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
+function expired(task) { return Boolean(task?.isDone && task.doneOn && task.doneOn < startOfToday()); }
+function current(id) { const task = byId(id); return expired(task) ? undefined : task; }
+function campTasks() { return state.side.map(current).filter(Boolean); }
+function titleFor(role) { return role === 'boss' ? current(state.boss)?.title : role === 'side' ? undefined : state[role]; }
+function statusFor(role) {
+ if (role === 'side') {
+  const camp = campTasks();
+  if (!camp.length) return 'empty';
+  return camp.some(task => task.id === currentId) ? 'active' : camp.every(task => task.isDone) ? 'complete' : 'chosen';
+ }
+ if (role === 'boss') {
+  const boss = current(state.boss);
+  if (!boss) return 'empty';
+  if (boss.isDone) return 'complete';
+  return boss.id === currentId || boss.subTaskIds?.includes(currentId) ? 'active' : 'chosen';
+ }
+ return !state[role] ? 'empty' : state.rituals[role] === day() ? 'complete' : 'chosen';
+}
+const statusWords = { empty: 'Nothing chosen yet', chosen: 'Ready', active: 'In progress', complete: 'Done for today' };
+
+let bossWasDone = null;
+function render() {
+ const bossDone = statusFor('boss') === 'complete';
+ // Celebrate only a change seen in this view, not a boss that was already done when it opened.
+ if (ready && bossWasDone === false && bossDone) celebrate();
+ if (ready) bossWasDone = bossDone;
+ for (const role of stops) {
+  const node = $('node-' + role), status = statusFor(role), title = titleFor(role);
+  node.dataset.status = status;
+  node.setAttribute('aria-expanded', String(role === selected));
+  node.disabled = !ready;
+  if (role === 'side') {
+   const waiting = campTasks().filter(task => !task.isDone).length;
+   node.querySelector('.step').hidden = !waiting;
+   node.querySelector('.step').textContent = waiting;
+   node.querySelector('.stop-value').textContent = waiting ? `${waiting} waiting` : 'Stash for later…';
+   node.title = 'Optional side quests';
+   node.setAttribute('aria-label', `Optional: Side quests, ${waiting} waiting.`);
+   continue;
+  }
+  node.querySelector('.stop-value').textContent = title || 'Choose…';
+  node.title = title || roles[role].empty;
+  node.setAttribute('aria-label', `Stop ${route.indexOf(role) + 1} of ${route.length}, ${roles[role].label}: ${title || 'nothing chosen yet'}. ${statusWords[status]}.`);
+ }
+ renderProgress();
+ renderPanel();
+ drawTrails();
+}
+function celebrate() {
+ const node = $('node-boss');
+ node.classList.remove('victory'); void node.offsetWidth; node.classList.add('victory');
+}
+$('node-boss').addEventListener('animationend', event => { if (event.animationName === 'victory') $('node-boss').classList.remove('victory'); });
+function renderProgress() {
+ const statuses = route.map(statusFor);
+ const chosen = statuses.filter(status => status !== 'empty').length;
+ const done = statuses.filter(status => status === 'complete').length;
+ const waiting = campTasks().filter(task => !task.isDone).length;
+ const side = waiting ? ` · ${waiting} side ${waiting === 1 ? 'quest' : 'quests'} waiting` : '';
+ $('progress').textContent = !ready ? 'Loading your map…' : chosen || waiting ? `${chosen} of ${route.length} stops chosen · ${done} done today${side}` : 'Nothing chosen yet. Pick a stop on the map to plan your day.';
+}
+function renderPanel() {
+ $('panel').hidden = !selected;
+ if (!selected) return;
+ const role = selected, title = titleFor(role), side = role === 'side';
+ $('detail-step').textContent = side ? 'Optional detour' : `Stop ${route.indexOf(role) + 1} of ${route.length}`;
+ $('detail-title').textContent = roles[role].label;
+ $('detail-icon').replaceChildren($('node-' + role).querySelector('.quest-icon').cloneNode(true));
+ $('choice').dataset.empty = String(!title);
+ $('choice-text').textContent = title || roles[role].empty;
+ $('choice-cta').textContent = side ? 'Add ›' : title ? 'Change' : 'Choose ›';
+ $('choice').title = title || '';
+ $('choice').setAttribute('aria-label', title ? `Change ${roles[role].label.toLowerCase()}: ${title}` : roles[role].empty);
+ $('choice').disabled = !ready || busy;
+ $('detail-hint').textContent = roles[role].hint;
+ renderSteps(role === 'boss' ? stepsFor(current(state.boss)) : []);
+ $('camp').hidden = !side || !campTasks().length;
+ $('camp').replaceChildren(...(side ? campTasks().map(campRow) : []));
+ renderAction(role);
+}
+function renderSteps(steps) {
+ const cleared = steps.filter(task => task.isDone).length;
+ $('steps-summary').hidden = $('steps').hidden = !steps.length;
+ $('steps-summary').textContent = `Path to the boss · ${cleared} of ${steps.length} steps cleared`;
+ $('steps').replaceChildren(...steps.map(task => {
+  const item = document.createElement('li'), button = document.createElement('button');
+  button.className = 'row'; button.dataset.status = taskStatus(task);
+  button.append(markFor(task), titleSpan(task));
+  button.setAttribute('aria-label', `${{ complete: 'Done', active: 'Running', chosen: 'Start step' }[button.dataset.status]}: ${task.title}`);
+  button.disabled = busy || button.dataset.status !== 'chosen';
+  button.addEventListener('click', () => run(progress => startTask(task.id, progress)));
+  item.append(button);
+  return item;
+ }));
+}
+function campRow(task) {
+ const item = document.createElement('li'), start = document.createElement('button'), remove = document.createElement('button');
+ item.className = 'camp-item'; item.dataset.status = taskStatus(task);
+ start.textContent = { complete: 'Done', active: 'Running', chosen: 'Start' }[item.dataset.status];
+ start.setAttribute('aria-label', `${start.textContent}: ${task.title}`);
+ start.disabled = busy || item.dataset.status !== 'chosen';
+ start.addEventListener('click', () => run(progress => startTask(task.id, progress)));
+ remove.textContent = '×'; remove.className = 'remove';
+ remove.setAttribute('aria-label', `Remove ${task.title} from side quests`);
+ remove.disabled = busy;
+ remove.addEventListener('click', () => run(() => save({ ...state, side: state.side.filter(id => id !== task.id) })));
+ item.append(markFor(task), titleSpan(task), start, remove);
+ return item;
+}
+function taskStatus(task) { return task.isDone ? 'complete' : task.id === currentId ? 'active' : 'chosen'; }
+function markFor(task) {
+ const mark = document.createElement('span');
+ mark.className = 'mark'; mark.setAttribute('aria-hidden', 'true');
+ mark.textContent = { complete: '✓', active: '▶', chosen: '○' }[taskStatus(task)];
+ return mark;
+}
+function titleSpan(task) { const span = document.createElement('span'); span.className = 'row-title'; span.textContent = task.title; return span; }
+function renderAction(role) {
+ const status = statusFor(role), boss = current(state.boss), action = $('act');
+ const cleared = role === 'boss' && boss?.subTaskIds?.length && !stepsFor(boss).some(task => !task.isDone);
+ action.hidden = role === 'side' || !titleFor(role);
+ action.textContent = status === 'complete' ? (role === 'boss' ? 'Boss defeated ✓' : 'Done for today ✓') : status === 'active' ? '▶ Adventuring now' : cleared ? 'Defeat the boss' : role === 'boss' && boss?.subTaskIds?.length ? 'Take the next step' : roles[role].action;
+ action.dataset.state = status;
+ action.disabled = !ready || busy || status === 'complete' || status === 'active';
+ if (role === 'boss' && boss) $('detail-hint').textContent = bossHint(boss, status, cleared);
+ const attempts = state.attempts[state.boss] || 0;
+ $('attempts').hidden = role !== 'boss' || !boss;
+ $('attempts').textContent = boss?.isDone ? 'Victory. You showed up.' : `${attempts} ${attempts === 1 ? 'attempt' : 'attempts'} · ${attempts ? 'Still standing' : 'A fresh start'}`;
+}
+function bossHint(boss, status, cleared) {
+ if (status === 'complete') return 'Boss defeated. Choose a new challenge whenever you are ready.';
+ if (cleared) return 'Every step is cleared. Defeating the boss marks it done in Super Productivity.';
+ if (boss.subTaskIds?.length) return 'One step at a time. You do not have to finish today.';
+ return 'You do not have to finish today. Give it subtasks in Super Productivity and they become steps on the way.';
+}
+function select(role) {
+ if (!ready) return;
+ selected = selected === role ? null : role;
+ notify(''); render();
+ if (selected) $('panel').scrollIntoView({ block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+}
+function closeDetail() { const role = selected; selected = null; render(); if (role) $('node-' + role).focus(); }
+$('close-detail').addEventListener('click', closeDetail);
+document.addEventListener('keydown', event => { if (event.key === 'Escape' && selected && !$('picker').open) closeDetail(); });
+for (const role of stops) $('node-' + role).addEventListener('click', () => select(role));
+
+function normalize(raw) {
+ if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Invalid saved data');
+ const next = { ...state };
+ next.boss = typeof raw.boss === 'string' ? raw.boss : null;
+ // v0.2 stored a single side quest; v0.3 keeps a list.
+ next.side = [...new Set((Array.isArray(raw.side) ? raw.side : [raw.side]).filter(id => typeof id === 'string' && id !== next.boss))];
+ for (const role of ['buff', 'recovery']) {
+  next[role] = typeof raw[role] === 'string' && raw[role].trim() ? raw[role].slice(0, 100) : null;
+  if (!(raw.version >= 2) && next[role] === legacyDefaults[role]) next[role] = null;
+ }
+ next.attempts = Object.fromEntries(Object.entries(raw.attempts || {}).filter(([, value]) => Number.isSafeInteger(value) && value >= 0));
+ next.rituals = Object.fromEntries(Object.entries(raw.rituals || {}).filter(([key, value]) => ['buff', 'recovery'].includes(key) && typeof value === 'string'));
+ return next;
+}
+async function save(next) {
+ // Drop side quests that were finished on an earlier day, so the stash does not grow forever.
+ next = { ...next, side: next.side.filter(id => !expired(byId(id))) };
+ await api.persistDataSynced(JSON.stringify(next)); state = next;
+}
+async function fetchTasks() {
+ const fresh = await api.getTasks();
+ if (!Array.isArray(fresh)) throw new Error('Tasks unavailable');
+ tasks = fresh;
+}
+async function refresh() {
+ if (busy) return;
+ busy = true; render();
+ try {
+  if (!api) throw new Error('Plugin bridge unavailable');
+  if (!ready) {
+   const saved = await api.loadSyncedData();
+   if (saved) state = normalize(JSON.parse(saved));
+  }
+  const recovering = !ready;
+  await fetchTasks(); ready = true;
+  if (recovering) notify('');
+ } catch (error) {
+  notify('Could not load your quest. Reopen Daily Quest to try again.');
+  console.error('Daily Quest load failed', error);
+ } finally { settle(); }
+}
+// Ends busy work; a task change reported meanwhile is loaded now.
+function settle() {
+ busy = false; render();
+ if (stale && ready) { stale = false; refresh(); }
+}
+
+// Task picker: a searchable combobox. Today's tasks and the current choice come first.
+function candidates() {
+ const boss = current(state.boss);
+ // The boss may have subtasks (they become its steps); side quests must be startable on their own.
+ const taken = new Set(selected === 'boss' ? state.side : [state.boss, ...(boss?.subTaskIds || []), ...state.side]);
+ // Overdue tasks also show in the app's Today list, so they rank with today's.
+ const today = dueToday();
+ const rank = task => task.id === state[selected] ? 0 : task.dueDay && task.dueDay <= today ? 1 : 2;
+ return tasks.filter(task => !task.isDone && !taken.has(task.id) && (selected === 'boss' || !task.subTaskIds?.length))
+  .map((task, index) => ({ task, index })).sort((a, b) => rank(a.task) - rank(b.task) || a.index - b.index).map(entry => entry.task);
+}
+function metaFor(task) {
+ const today = dueToday(), parent = task.parentId && byId(task.parentId);
+ const minutes = Math.round((task.timeEstimate || 0) / 60000), steps = task.subTaskIds?.length;
+ return [
+  task.id === currentId && 'Running now',
+  task.id === state[selected] && 'Current choice',
+  task.dueDay && (task.dueDay === today ? 'Today' : task.dueDay < today && 'Overdue'),
+  steps && `${steps} ${steps === 1 ? 'step' : 'steps'}`,
+  parent && `Subtask of ${parent.title}`,
+  minutes && `~${minutes >= 60 ? `${Math.floor(minutes / 60)}h${minutes % 60 ? ` ${minutes % 60}m` : ''}` : `${minutes}m`}`
+ ].filter(Boolean).join(' · ');
+}
+function highlight(text, words) {
+ if (!words.length) return [text];
+ const pattern = new RegExp(`(${words.map(word => word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+ return text.split(pattern).map((part, index) => {
+  if (index % 2 === 0) return part;
+  const mark = document.createElement('mark'); mark.textContent = part; return mark;
+ });
+}
+function renderTaskList() {
+ const all = candidates();
+ const raw = $('task-search').value.trim();
+ const words = raw.toLowerCase().split(/\s+/).filter(Boolean);
+ matches = all.filter(task => words.every(word => String(task.title).toLowerCase().includes(word)));
+ $('task-choice').replaceChildren(...matches.map((task, index) => {
+  const option = document.createElement('li'), text = document.createElement('span'), title = document.createElement('span'), meta = document.createElement('span');
+  option.id = 'task-option-' + index; option.setAttribute('role', 'option');
+  text.className = 'option-text'; title.append(...highlight(String(task.title), words));
+  meta.className = 'option-meta'; meta.textContent = metaFor(task);
+  text.append(title); if (meta.textContent) text.append(meta);
+  option.append(text);
+  if (task.id === state[selected]) { const check = document.createElement('span'); check.className = 'option-check'; check.textContent = '✓'; check.setAttribute('aria-hidden', 'true'); option.append(check); }
+  option.addEventListener('click', () => saveChoice(task.id));
+  option.addEventListener('mousemove', () => setActive(index));
+  return option;
+ }));
+ $('task-search').hidden = !all.length;
+ $('task-count').hidden = !all.length;
+ $('task-count').textContent = words.length ? `${matches.length} of ${all.length} tasks` : `${all.length} ${all.length === 1 ? 'task' : 'tasks'} · type to filter, ↑↓ to move, Enter to choose`;
+ $('task-empty').hidden = matches.length > 0;
+ $('task-empty').textContent = all.length ? `No tasks match “${raw}”.` : selected === 'boss' ? 'No available tasks. Add an unfinished task in Super Productivity, then try again. Stashed side quests are left out.' : 'No available tasks. Add an unfinished task in Super Productivity, then try again. Tasks with subtasks, the boss and its steps, and tasks already stashed are left out.';
+ setActive(words.length && matches.length ? 0 : -1);
+}
+function setActive(index) {
+ activeIndex = index;
+ [...$('task-choice').children].forEach((option, i) => option.setAttribute('aria-selected', String(i === index)));
+ const option = $('task-option-' + index);
+ if (option) { $('task-search').setAttribute('aria-activedescendant', option.id); option.scrollIntoView({ block: 'nearest' }); }
+ else $('task-search').removeAttribute('aria-activedescendant');
+}
+$('task-search').addEventListener('input', renderTaskList);
+$('task-search').addEventListener('keydown', event => {
+ if (!matches.length || !['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+ event.preventDefault();
+ const last = matches.length - 1;
+ setActive(event.key === 'Home' ? 0 : event.key === 'End' ? last : event.key === 'ArrowDown' ? (activeIndex >= last ? 0 : activeIndex + 1) : (activeIndex <= 0 ? last : activeIndex - 1));
+});
+
+const pickerText = {
+ boss: ['Choose your final boss', 'Pick one challenge. A task with subtasks turns them into steps on the way.'],
+ side: ['Stash a side quest', 'Something that can wait. It stays off the main path.'],
+ buff: ['Your buff', 'A small ritual to help you begin. Pick an idea or make it yours.'],
+ recovery: ['Your recovery', 'A little room to recharge. Pick an idea or make it yours.']
+};
+async function openPicker() {
+ if (busy || !ready || !selected) return;
+ busy = true; render();
+ try {
+  const taskMode = isTask(selected);
+  if (taskMode) await fetchTasks();
+  [$('picker-title').textContent, $('picker-help').textContent] = pickerText[selected];
+  $('task-mode').hidden = !taskMode;
+  $('ritual-mode').hidden = taskMode;
+  $('save').hidden = taskMode;
+  $('save').textContent = `Save ${roles[selected].label.toLowerCase()}`;
+  $('ritual').required = !taskMode;
+  $('ritual').placeholder = selected === 'buff' ? 'What helps you get started?' : 'What helps you recharge?';
+  $('ritual').value = taskMode ? '' : state[selected] || '';
+  $('suggestions').replaceChildren(...(suggestions[selected] || []).map(suggestion => {
+   const button = document.createElement('button');
+   button.type = 'button'; button.textContent = suggestion;
+   button.addEventListener('click', () => saveChoice(suggestion));
+   return button;
+  }));
+  updateSuggestions();
+  $('task-search').value = '';
+  if (taskMode) renderTaskList();
+  $('picker-error').textContent = '';
+  $('picker').showModal();
+  (taskMode ? $('task-search').hidden ? $('cancel') : $('task-search') : $('ritual')).focus();
+ } catch (error) { notify('Could not load tasks. Please try again.'); }
+ finally { settle(); }
+}
+function updateSuggestions() {
+ for (const button of $('suggestions').children) button.setAttribute('aria-pressed', String(button.textContent === $('ritual').value.trim()));
+}
+$('ritual').addEventListener('input', updateSuggestions);
+async function saveChoice(value) {
+ if (busy) return;
+ if (!value) { $('picker-error').textContent = 'Add a little something for yourself first.'; $('ritual').focus(); return; }
+ $('picker-error').textContent = '';
+ busy = true;
+ for (const control of $('picker-form').querySelectorAll('button, input')) control.disabled = true;
+ render();
+ try {
+  const next = { ...state, rituals: { ...state.rituals } };
+  if (selected === 'side') next.side = [...state.side, value];
+  else next[selected] = value;
+  // A new boss's subtasks become its steps, so they cannot also wait as side quests.
+  if (selected === 'boss') next.side = state.side.filter(id => id !== value && !byId(value)?.subTaskIds?.includes(id));
+  if (!isTask(selected) && value !== state[selected]) delete next.rituals[selected];
+  await save(next); $('picker').close(); notify('');
+ }
+ catch (error) { $('picker-error').textContent = 'Could not save your choice. Please try again.'; }
+ finally {
+  for (const control of $('picker-form').querySelectorAll('button, input')) control.disabled = false;
+  settle();
+  if (!$('picker').open) $('act').hidden ? $('choice').focus() : $('act').focus();
+ }
+}
+$('picker-form').addEventListener('submit', event => {
+ event.preventDefault();
+ if (!isTask(selected)) saveChoice($('ritual').value.trim());
+ else if (matches[activeIndex]) saveChoice(matches[activeIndex].id);
+});
+$('picker').addEventListener('cancel', event => { if (busy) event.preventDefault(); });
+// Clicks on the dimmed backdrop land on the dialog element itself.
+$('picker').addEventListener('click', event => { if (event.target === $('picker') && !busy) $('picker').close(); });
+$('cancel').addEventListener('click', () => $('picker').close());
+$('choice').addEventListener('click', openPicker);
+$('act').addEventListener('click', () => {
+ const role = selected;
+ run(async progress => {
+  if (role === 'boss') return faceBoss(progress);
+  await save({ ...state, rituals: { ...state.rituals, [role]: day() } });
+  notify(roles[role].cheer);
+ });
+});
+
+// Shared busy/error handling for anything that changes tasks or saved state from the card.
+async function run(work) {
+ if (!ready || busy) return;
+ busy = true; render();
+ const progress = { started: false };
+ try { await work(progress); }
+ catch (error) { notify(progress.started ? 'Task started, but the attempt could not be saved.' : 'That did not work. Please try again.'); }
+ finally {
+  settle();
+  // Rows are rebuilt on render, so keep keyboard focus inside the card.
+  if (selected && !$('panel').contains(document.activeElement)) $('detail-title').focus();
+ }
+}
+async function faceBoss(progress) {
+ await fetchTasks();
+ const boss = current(state.boss), next = stepsFor(boss).find(task => !task.isDone);
+ if (boss && !boss.isDone && boss.subTaskIds?.length && !next) {
+  await api.updateTask(boss.id, { isDone: true });
+  await fetchTasks();
+  notify(demo ? 'Demo: victory! No real task was changed.' : 'Victory! The boss is marked done.');
+  return;
+ }
+ await startTask(next?.id || state.boss, progress);
+}
+async function startTask(id, progress) {
+ await fetchTasks();
+ const task = byId(id);
+ if (!task || task.isDone || task.subTaskIds?.length) { notify('This task is no longer available. Choose another quest.'); return; }
+ if (currentId === task.id) return;
+ await api.dispatchAction({ type: '[Task] SetCurrentTask', id: task.id });
+ progress.started = true; currentId = task.id;
+ const forBoss = Boolean(state.boss) && (task.id === state.boss || task.parentId === state.boss);
+ if (forBoss) await save({ ...state, attempts: { ...state.attempts, [state.boss]: (state.attempts[state.boss] || 0) + 1 } });
+ notify(demo ? 'Demo: your adventure has begun. No real task was changed.' : forBoss ? 'Your adventure has begun. The task timer is running.' : 'Side quest started. The task timer is running.');
+}
+
+// Trails follow the real stop positions, so they survive resizing and layout switches.
+const map = document.querySelector('.map');
+const trails = document.querySelector('.trails');
+const maxWaypoints = 6;
+function centerOf(role) {
+ const bounds = map.getBoundingClientRect(), orb = $('node-' + role).querySelector('.orb').getBoundingClientRect();
+ return { x: orb.x - bounds.x + orb.width / 2, y: orb.y - bounds.y + orb.height / 2 };
+}
+// A gently bent quadratic curve from a to b; bend is the sideways offset relative to its length.
+function curve(a, b, bend) {
+ const c = { x: (a.x + b.x) / 2 - (b.y - a.y) * bend, y: (a.y + b.y) / 2 + (b.x - a.x) * bend };
+ return t => ({ x: (1 - t) ** 2 * a.x + 2 * (1 - t) * t * c.x + t * t * b.x, y: (1 - t) ** 2 * a.y + 2 * (1 - t) * t * c.y + t * t * b.y });
+}
+function trailPath(point, from, to, attributes) {
+ const points = Array.from({ length: 17 }, (_, i) => point(from + (to - from) * i / 16));
+ return `<path ${attributes} d="M${points.map(p => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' L')}" fill="none" stroke="currentColor" stroke-linecap="round"/>`;
+}
+// Long step lists show a window around the next open step; the card lists all of them.
+function visibleSteps() {
+ const steps = stepsFor(current(state.boss));
+ const next = Math.max(0, steps.findIndex(task => !task.isDone));
+ const start = Math.max(0, Math.min(next - 1, steps.length - maxWaypoints));
+ return steps.slice(start, start + maxWaypoints);
+}
+function drawTrails() {
+ const bounds = map.getBoundingClientRect();
+ const main = curve(centerOf('buff'), centerOf('boss'), .16), last = curve(centerOf('boss'), centerOf('recovery'), -.18);
+ const steps = visibleSteps(), nextOpen = steps.find(task => !task.isDone);
+ const ts = [0, ...steps.map((_, i) => .22 + .56 * (i + 1) / (steps.length + 1)), 1];
+ const doneFrom = [statusFor('buff') === 'complete', ...steps.map(task => task.isDone)];
+ const dotted = 'stroke-width="3" stroke-dasharray="2 9"';
+ trails.setAttribute('viewBox', `0 0 ${bounds.width} ${bounds.height}`);
+ trails.innerHTML = [
+  ...ts.slice(1).map((t, i) => trailPath(main, ts[i], t, `${doneFrom[i] ? 'class="done" ' : ''}${dotted}`)),
+  trailPath(last, 0, 1, `${statusFor('boss') === 'complete' ? 'class="done" ' : ''}${dotted}`),
+  trailPath(curve(main(.16), centerOf('side'), .1), 0, 1, 'class="branch" stroke-width="2" stroke-dasharray="1 7"')
+ ].join('');
+ $('waypoints').replaceChildren(...steps.map((task, i) => {
+  const dot = document.createElement('span'), point = main(ts[i + 1]);
+  dot.className = 'waypoint'; dot.title = task.title;
+  dot.dataset.status = task.isDone ? 'complete' : task.id === currentId ? 'active' : task === nextOpen ? 'next' : 'open';
+  dot.style.left = point.x + 'px'; dot.style.top = point.y + 'px';
+  return dot;
+ }));
+ placeCard();
+}
+// Of the spots around the stop, use the one that hides the fewest other stops and waypoints.
+// Ties go to the side facing away from the incoming trail, then below, then above.
+function placeCard() {
+ const panel = $('panel');
+ if (!selected) return;
+ const gap = 12, box = map.getBoundingClientRect(), node = $('node-' + selected);
+ const rel = rect => ({ left: rect.left - box.x, top: rect.top - box.y, right: rect.right - box.x, bottom: rect.bottom - box.y });
+ const stop = rel(node.getBoundingClientRect()), orb = rel(node.querySelector('.orb').getBoundingClientRect());
+ const width = Math.min(320, box.width - gap * 2);
+ panel.style.width = width + 'px';
+ const height = panel.offsetHeight, centerX = (orb.left + orb.right) / 2, centerY = (orb.top + orb.bottom) / 2;
+ const sideY = Math.max(gap, Math.min(centerY - height / 2, box.height - height - gap));
+ const middleX = Math.max(gap, Math.min(centerX - width / 2, box.width - width - gap));
+ const right = { x: stop.right + gap, y: sideY }, left = { x: stop.left - gap - width, y: sideY };
+ const from = centerOf({ buff: 'boss', boss: 'buff', recovery: 'boss', side: 'buff' }[selected]);
+ const spots = [...(from.x < centerX ? [right, left] : [left, right]), { x: middleX, y: stop.bottom + gap }, { x: middleX, y: orb.top - gap - height }]
+  .filter(spot => spot.x >= gap - 1 && spot.x + width <= box.width - gap + 1 && spot.y >= gap - 1);
+ const obstacles = [...map.querySelectorAll('.stop, .waypoint')].filter(other => other !== node).map(other => rel(other.getBoundingClientRect()));
+ // Hanging past the bottom of the map is allowed, but costs a little.
+ const cost = spot => obstacles.filter(o => o.left < spot.x + width && o.right > spot.x && o.top < spot.y + height && o.bottom > spot.y).length + (spot.y + height > box.height ? .5 : 0);
+ const best = spots.reduce((a, b) => cost(b) < cost(a) ? b : a);
+ panel.style.left = best.x + 'px'; panel.style.top = best.y + 'px';
+}
+new ResizeObserver(drawTrails).observe(map);
+$('waypoints').addEventListener('click', event => { if (event.target.closest('.waypoint') && selected !== 'boss') select('boss'); });
+// composedPath keeps the original ancestors even when a click re-renders (and detaches) its target.
+map.addEventListener('click', event => { if (selected && !event.composedPath().some(node => node instanceof Element && node.matches('.panel, .stop, .waypoint'))) closeDetail(); });
+
+refresh();
+if (api?.registerHook) {
+ for (const hook of ['taskComplete', 'taskUpdate', 'taskDelete', 'currentTaskChange']) {
+  Promise.resolve(api.registerHook(hook, (payload) => {
+   if (hook === 'currentTaskChange') { currentId = payload?.current?.id || null; render(); }
+   // A change during other work is remembered and loaded once that work is done.
+   if (busy) stale = true; else refresh();
+  })).catch(() => notify('Live updates unavailable. Reopen Daily Quest to see task changes.'));
+ }
+}
+</script>
+</body>
+</html>

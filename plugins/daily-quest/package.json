@@ -1,0 +1,7 @@
+{
+  "name": "ridonculous-daily-quest",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": { "test": "node tests/browser.cjs" },
+  "devDependencies": { "playwright": "1.61.1" }
+}

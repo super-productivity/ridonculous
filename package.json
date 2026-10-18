@@ -1,0 +1,9 @@
+{
+  "name": "ridonculous",
+  "private": true,
+  "scripts": {
+    "dev": "node tools/live.cjs",
+    "test:live": "node tools/live.cjs --smoke"
+  },
+  "devDependencies": { "playwright": "1.61.1" }
+}
