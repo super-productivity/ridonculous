@@ -1,0 +1,19 @@
+{
+  "id": "ridonculous-stadium-mode",
+  "name": "Stadium Mode",
+  "version": "0.3.0",
+  "description": "A roaring crowd and an overexcited commentator for every task you start, finish, postpone, or delete.",
+  "manifestVersion": 1,
+  "minSupVersion": "19.2.0",
+  "iFrame": false,
+  "isSkipMenuEntry": true,
+  "icon": "icon.svg",
+  "hooks": [
+    "taskComplete",
+    "taskUpdate",
+    "taskDelete",
+    "currentTaskChange",
+    "finishDay"
+  ],
+  "permissions": ["showSnack", "openDialog"]
+}

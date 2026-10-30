@@ -19,9 +19,11 @@ These are playground projects, with no promise of ongoing maintenance or compati
 
 **[Daily Quest](plugins/daily-quest/)** — an adventure map from a buff to your final boss task to a recovery break, with the boss's subtasks as steps along the trail, an optional side-quest stash branching off it, and a searchable task picker, using Super Productivity’s standard UI kit. Includes a standalone demo and a local live-app test setup. Video coming when it exists.
 
+**[Stadium Mode](plugins/stadium-mode/)**: a roaring crowd and an overexcited commentator for your task list. Kick off when you start a task, "GOAL!" when you finish one, hat tricks for quick streaks, "ooooh" for rescheduling, red cards for deletions, and a final whistle with the day's score at Finish Day. All sound is synthesized in the app, and the plugin ships no audio files. An optional neural announcer voice (Kokoro, through a stadium PA) downloads about 110 MB after you confirm; otherwise it makes no network requests. Video coming when it exists.
+
 ## Test plugins in the real app
 
-The launcher serves a local Super Productivity web build, opens a dedicated Chromium profile, installs the selected plugin ZIP, and opens its view. It does not modify the Super Productivity checkout. This is the real app and plugin bridge, not the standalone demo.
+The launcher serves a local Super Productivity web build, opens a dedicated Chromium profile, installs the selected plugin ZIP, and opens its view (background-only plugins such as Stadium Mode have no view; they run once enabled). It does not modify the Super Productivity checkout. This is the real app and plugin bridge, not the standalone demo.
 
 One-time setup in this repository (Node.js 22+, Python 3):
 
@@ -48,7 +50,7 @@ The app opens at `http://127.0.0.1:4173`. Add test tasks in Today, then return t
 
 You can set `SP_DIR=/path/to/super-productivity` instead of passing the checkout each time. Without either, the launcher looks for `../super-productivity` relative to this repository. It prefers `.tmp/angular-dist/browser`, falling back to `dist/browser`; rebuild the app when you need newer host code. Only a built frontend is required at launch time.
 
-Test data persists in the ignored `.local/browser-profile/`. Keep this profile disconnected from sync. It is separate from your everyday browser and desktop app. To start fresh, close the launcher and delete that directory. Installation consent is automated only for the local plugin you selected in this test profile.
+Test data persists in the ignored `.local/browser-profile/`. Keep this profile disconnected from sync. It is separate from your everyday browser and desktop app. To start fresh, close the launcher and delete that directory. Whenever the Today list is empty at launch, the launcher fills it with the shared demo tasks from `tools/demo-tasks.json`, so every video starts from the same tasks. The titles use Super Productivity's short syntax: `1h` sets an estimate and `20m/1h` sets time spent and an estimate. Installation consent is automated only for the local plugin you selected in this test profile.
 
 Run a quick headless check with a temporary profile:
 
