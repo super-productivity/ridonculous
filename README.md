@@ -19,7 +19,7 @@ These are playground projects, with no promise of ongoing maintenance or compati
 
 **[Daily Quest](plugins/daily-quest/)** — an adventure map from a buff to your final boss task to a recovery break, with the boss's subtasks as steps along the trail, an optional side-quest stash branching off it, and a searchable task picker, using Super Productivity’s standard UI kit. Includes a standalone demo and a local live-app test setup. Video coming when it exists.
 
-**[Stadium Mode](plugins/stadium-mode/)**: a roaring crowd and an overexcited commentator for your task list. Kick off when you start a task, "GOAL!" when you finish one, hat tricks for quick streaks, "ooooh" for rescheduling, red cards for deletions, and a final whistle with the day's score at Finish Day. All sound is synthesized in the app, and the plugin ships no audio files. An optional neural announcer voice (Kokoro, through a stadium PA) downloads about 110 MB after you confirm; otherwise it makes no network requests. Video coming when it exists.
+**[Stadium Mode](plugins/stadium-mode/)**: a roaring crowd and a booming stadium announcer for your task list. Kick off when you start a task, "GOAL!" when you finish one, hat tricks for quick streaks, "ooooh" for rescheduling, red cards for deletions, and a final whistle with the day's score at Finish Day. All sound is synthesized in the app, and the plugin ships no audio files. An optional neural announcer voice (Kokoro, through a stadium PA) downloads about 110 MB after you confirm; otherwise it makes no network requests. Video coming when it exists.
 
 ## Test plugins in the real app
 

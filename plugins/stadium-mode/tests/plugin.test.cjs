@@ -117,7 +117,7 @@ test('quick completions build a combo that resets after the window', (t) => {
   assert.doesNotMatch(s.last(), /double|HAT TRICK|in a row/i);
 });
 
-test('the commentator notices pace against the estimate', () => {
+test('the announcer notices pace against the estimate', () => {
   const s = load();
   s.hooks.taskComplete({ task: task({ timeEstimate: 3600000, timeSpent: 1200000 }) });
   assert.match(s.last(), /ahead of schedule/);
@@ -285,7 +285,7 @@ test('planning a task for today is not a reschedule', () => {
   assert.equal(s.log.spoken.length, 0);
 });
 
-test('without any speech voice, a one-time snack explains the silent commentator', () => {
+test('without any speech voice, a one-time snack explains the silent announcer', () => {
   const s = load(new Map(), []);
   s.hooks.taskComplete({ task: task() });
   s.hooks.taskComplete({ task: task() });
@@ -294,7 +294,7 @@ test('without any speech voice, a one-time snack explains the silent commentator
   assert.ok(s.log.started > 0, 'crowd still plays');
 });
 
-test('the announcer speaks slow and deep with a stadium echo; the commentator fast and high', (t) => {
+test('the announcer reads every line slow and deep with a stadium echo', (t) => {
   withClock(t);
   const s = load();
   s.hooks.currentTaskChange({ current: task({ title: 'Alpha' }), previous: null });
@@ -305,9 +305,9 @@ test('the announcer speaks slow and deep with a stadium echo; the commentator fa
   assert.ok(s.log.utterances.at(-1).volume < s.log.utterances.at(-2).volume, 'echo fades');
 
   s.hooks.taskComplete({ task: task({ isDone: true }) });
-  const commentator = s.lastUtterance();
-  assert.ok(commentator.pitch > 1 && commentator.rate > 1);
-  assert.equal(s.log.echoes.length, 2, 'no echo for the commentator');
+  const goal = s.log.utterances.find((u) => /GOAL|net|finish/.test(u.text));
+  assert.ok(goal.pitch < 1 && goal.rate < 1, 'the goal call is the announcer too');
+  assert.equal(s.log.echoes.length, 4, 'the goal call echoes off the stands');
 });
 
 test('the crowd answers when the announcer finishes, but not for a cut-off line', (t) => {
@@ -389,8 +389,8 @@ test('once ready, the announcer is generated phrase by phrase, played, and cache
   const started = s.log.started;
   await answerAll(worker);
   const order = worker.sent.map((m) => `${m.voice}: ${m.text}`);
-  const title = order.indexOf('am_michael: Alpha!');
-  assert.ok(title > 1 && title < order.indexOf('bm_george: Alpha!'), `Michael announces first: ${order}`);
+  assert.ok(order.indexOf('am_michael: Alpha!') > 1, `the intro goes first: ${order}`);
+  assert.ok(order.every((job) => job.startsWith('am_michael: ')), `only Michael: ${order}`);
   assert.ok(s.log.started > started, 'phrases play over the PA');
 
   // A repeated intro is served from the cache instead of being generated again.
@@ -399,14 +399,13 @@ test('once ready, the announcer is generated phrase by phrase, played, and cache
   t.mock.timers.tick(300);
   assert.equal(worker.sent.length, sentBefore);
 
-  const prepared = () => worker.sent.filter((m) => m.voice === 'bm_george' && m.text === 'Alpha!').length;
-  assert.equal(prepared(), 1, 'George prepares the title for the goal call at kick off');
-
+  const titles = () => worker.sent.filter((m) => m.text === 'Alpha!').length;
+  const playedBefore = s.log.started;
   s.hooks.taskComplete({ task: task({ title: 'Alpha', isDone: true }) });
-  assert.equal(s.log.spoken.length, 0, 'George calls the goal, not the system voice');
-  const goal = worker.sent.filter((m) => m.voice === 'bm_george').map((m) => m.text);
-  assert.ok(goal.includes('GOAL!') && goal.includes('The crowd goes wild!'), `goal call: ${goal}`);
-  assert.equal(prepared(), 1, 'the prepared title is reused');
+  await answerAll(worker);
+  assert.equal(s.log.spoken.length, 0, 'Michael calls the goal, not the system voice');
+  assert.equal(titles(), 1, "the goal reuses the kick off's title clip");
+  assert.ok(s.log.started > playedBefore, 'the goal call plays over the PA');
 });
 
 test('once ready, the fixed announcer phrases are prepared one at a time', async () => {
@@ -453,7 +452,7 @@ test('prepared announcer phrases survive a reload, task titles do not', async (t
   assert.deepEqual(second.log.workers[0].sent, [], 'no warm-up generation after a reload');
 });
 
-test('a kick off right after a goal waits for the goal call before the PA starts', async () => {
+test('a kick off right after a goal waits for the goal call to finish', async () => {
   const s = load(new Map([[NEURAL_KEY, 'true']]));
   const [worker] = s.log.workers;
   worker.onmessage({ data: { ready: true } });
@@ -467,7 +466,7 @@ test('a kick off right after a goal waits for the goal call before the PA starts
   await answerAll(worker);
   const started = s.log.started;
   await new Promise((resolve) => setTimeout(resolve, 250));
-  assert.equal(s.log.started, started, 'nothing plays while George is on');
+  assert.equal(s.log.started, started, 'nothing plays while the goal call is on');
   goalEnd.onended();
   await new Promise((resolve) => setTimeout(resolve, 50));
   assert.ok(s.log.started > started, 'Michael follows once the goal call ends');
@@ -555,7 +554,7 @@ test('the big screen clears itself, stays dark while muted, and is removed on un
 
 // Regression: during the warm-up, a substitution went silent after "Coming on" because the incoming title
 // waited behind warm-up phrases, George's prepared titles and the jobs of the kick off it had cut off.
-test('a new line is generated ahead of the warm-up, prepared titles and lines that were cut off', async (t) => {
+test('a new line is generated ahead of the warm-up and lines that were cut off', async (t) => {
   withClock(t);
   t.mock.method(Math, 'random', () => 0); // kick off: "Ladies and gentlemen... now taking the field... {title}!"
   const s = load(new Map([[NEURAL_KEY, 'true']]));
@@ -570,7 +569,7 @@ test('a new line is generated ahead of the warm-up, prepared titles and lines th
   const order = [];
   for (let i = 0; i < worker.sent.length && i < 200; i++) {
     const { id, text, voice } = worker.sent[i];
-    order.push(`${voice === 'bm_george' ? 'George' : 'Michael'}: ${text}`);
+    order.push(`${voice === 'am_michael' ? 'Michael' : voice}: ${text}`);
     worker.onmessage({ data: { id, audio: new Float32Array(10), rate: 24000 } });
     await flush();
   }
@@ -578,8 +577,6 @@ test('a new line is generated ahead of the warm-up, prepared titles and lines th
   assert.ok(at('Michael: Bravo!') >= 0, `jobs: ${order}`);
   assert.ok(at('Michael: Bravo!') <= 4, `the new title is at most behind the job in flight and its own line: ${order.slice(0, 8)}`);
   assert.ok(at('Michael: Bravo!') < at('Michael: now taking the field'), 'ahead of the cut-off kick off');
-  assert.ok(at('Michael: Bravo!') < at('George: Alpha!'), 'ahead of prepared titles');
-  assert.ok(at('Michael: Alpha!') < at('George: Alpha!'), 'Michael before George prepares the same title');
 });
 
 test('a kick off right after a goal waits for the goal scene, and mute clears the screen', async (t) => {
@@ -606,7 +603,7 @@ test('a title cut off with "..." is not followed by a lone "!" phrase', async (t
   assert.ok(!worker.sent.some((m) => !/\w/.test(m.text)), `phrases: ${worker.sent.map((m) => m.text)}`);
 });
 
-test('a goal call moves its prepared title ahead of the warm-up', async (t) => {
+test("a goal call moves the kick off's title clip ahead of the warm-up", async (t) => {
   withClock(t);
   t.mock.method(Math, 'random', () => 0);
   const s = load(new Map([[NEURAL_KEY, 'true']]));
@@ -617,5 +614,6 @@ test('a goal call moves its prepared title ahead of the warm-up', async (t) => {
   s.hooks.taskComplete({ task: task({ title: 'Alpha', isDone: true }) });
   await answerAll(worker);
   const order = worker.sent.map((m) => `${m.voice}: ${m.text}`);
-  assert.ok(order.indexOf('bm_george: Alpha!') <= 3, `George's title right after GOAL!: ${order}`);
+  const title = order.indexOf('am_michael: Alpha!');
+  assert.ok(title >= 0 && title <= 3, `the title right after GOAL!: ${order}`);
 });

@@ -1,4 +1,4 @@
-// Stadium Mode: a crowd and a commentator for your task list.
+// Stadium Mode: a crowd and a stadium announcer for your task list.
 // All sound is synthesized locally (Web Audio + Web Speech). The optional neural voices
 // downloads its code and model once, after the user confirms; task titles never leave the machine.
 
@@ -17,7 +17,7 @@ const SETTLE_MS = 300;
 const EXIT_WINDOW_MS = 1000;
 
 const LINES = {
-  // Titles stand alone as "{title}!" sentences, so the neural commentator can prepare them at kick off.
+  // Titles stand alone as "{title}!" sentences, so a goal reuses the title clip the kick off made.
   goal: [
     'GOAL! {title}! The crowd goes wild!',
     'It is in the back of the net! {title}! Done!',
@@ -42,7 +42,7 @@ const LINES = {
   redCard: ['Red card! A task is sent off!', 'Straight red! That task is off the pitch!'],
 };
 
-/** Shortens a task title so the commentator does not read an essay aloud. */
+/** Shortens a task title so the announcer does not read an essay aloud. */
 const shortTitle = (task) => {
   const title = String((task && task.title) || 'that task').trim();
   return title.length > 60 ? `${title.slice(0, 57)}...` : title;
@@ -63,16 +63,13 @@ const paceLine = (task) => {
   return task.timeSpent > task.timeEstimate * 1.5 ? 'Deep into extra time, but it counts!' : '';
 };
 
-// Two people on air: a slow, deep stadium announcer and an excitable TV commentator.
-const VOICES = {
-  announcer: { rate: 0.85, pitch: 0.75 },
-  commentator: { rate: 1.15, pitch: 1.15 },
-};
+// One voice on air: a slow, deep stadium announcer.
+const VOICE = { rate: 0.85, pitch: 0.75 };
 
 /**
  * Decides how the stadium reacts to one event. Pure apart from Math.random line choice.
  * `cues` play at once; `outro` cues play when the spoken line ends.
- * @returns {{ cues: string[], outro: string[], line: string, voice: string, state: object }}
+ * @returns {{ cues: string[], outro: string[], line: string, state: object }}
  */
 const react = (event, state, now) => {
   const vars = { title: shortTitle(event.task) };
@@ -81,37 +78,37 @@ const react = (event, state, now) => {
       const combo = now - state.lastGoalAt <= COMBO_WINDOW_MS ? state.combo + 1 : 1;
       const line = [pick(LINES.goal, vars), comboLine(combo), paceLine(event.task)].filter(Boolean).join(' ');
       const next = { ...state, combo, lastGoalAt: now, goals: state.goals + 1, lastExit: { ids: [event.task.id], at: now } };
-      return { cues: ['cheer'], outro: combo > 1 ? ['airhorn'] : [], line, voice: 'commentator', state: next };
+      return { cues: ['cheer'], outro: combo > 1 ? ['airhorn'] : [], line, state: next };
     }
     case 'kickoff':
-      return { cues: ['whistle', 'murmur'], outro: ['organ'], line: pick(LINES.kickoff, vars), voice: 'announcer', state };
+      return { cues: ['whistle', 'murmur'], outro: ['organ'], line: pick(LINES.kickoff, vars), state };
     case 'halftime':
-      return { cues: ['whistle', 'murmur'], outro: [], line: pick(LINES.halftime, vars), voice: 'announcer', state };
+      return { cues: ['whistle', 'murmur'], outro: [], line: pick(LINES.halftime, vars), state };
     case 'substitution': {
       const line = pick(LINES.substitution, { from: shortTitle(event.from), to: shortTitle(event.task) });
-      return { cues: ['whistle', 'murmur'], outro: [], line, voice: 'announcer', state };
+      return { cues: ['whistle', 'murmur'], outro: [], line, state };
     }
     case 'postponed':
-      return { cues: ['ooh'], outro: [], line: pick(LINES.postponed, vars), voice: 'commentator', state };
+      return { cues: ['ooh'], outro: [], line: pick(LINES.postponed, vars), state };
     case 'transfer':
-      return { cues: ['ooh'], outro: [], line: pick(LINES.transfer, vars), voice: 'commentator', state };
+      return { cues: ['ooh'], outro: [], line: pick(LINES.transfer, vars), state };
     case 'disallowed': {
       const next = { ...state, combo: 0, goals: Math.max(0, state.goals - 1) };
-      return { cues: ['boo'], outro: [], line: pick(LINES.disallowed, vars), voice: 'commentator', state: next };
+      return { cues: ['boo'], outro: [], line: pick(LINES.disallowed, vars), state: next };
     }
     case 'redCard': {
       const count = event.ids.length;
       const line = count > 1 ? `Mass red cards! ${count} tasks sent off!` : pick(LINES.redCard, vars);
-      return { cues: ['boo'], outro: [], line, voice: 'commentator', state: { ...state, lastExit: { ids: event.ids, at: now } } };
+      return { cues: ['boo'], outro: [], line, state: { ...state, lastExit: { ids: event.ids, at: now } } };
     }
     case 'fullTime': {
       const line = state.goals
         ? `Ladies and gentlemen... that is full time! ${state.goals} ${state.goals === 1 ? 'goal' : 'goals'} today!`
         : 'Ladies and gentlemen... full time. A goalless draw. The fans want their money back.';
-      return { cues: ['finalWhistle', 'murmur'], outro: ['cheer'], line, voice: 'announcer', state: { ...state, goals: 0, combo: 0 } };
+      return { cues: ['finalWhistle', 'murmur'], outro: ['cheer'], line, state: { ...state, goals: 0, combo: 0 } };
     }
     default:
-      return { cues: [], outro: [], line: '', voice: 'commentator', state };
+      return { cues: [], outro: [], line: '', state };
   }
 };
 
@@ -248,16 +245,13 @@ const interrupt = () => {
   playing.clear();
 };
 
-// ---------- Neural voices (opt-in): Kokoro TTS in a worker; announcer through a stadium PA, commentator dry ----------
+// ---------- Neural voice (opt-in): Kokoro TTS in a worker, played through a stadium PA ----------
 
 const NEURAL_KEY = 'ridonculous-stadium-mode-neural-voice';
 // Pinned, so the code running inside the app can't change under us.
 const KOKORO_URL = 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js';
-// Michael booms over the stadium PA; George calls the game from the TV booth.
-const NEURAL = {
-  announcer: { voice: 'am_michael', speed: 1.25, pauseS: 0.2 },
-  commentator: { voice: 'bm_george', speed: 1.2, pauseS: 0.05 },
-};
+// Michael booms over the stadium PA.
+const NEURAL = { voice: 'am_michael', speed: 1.25, pauseS: 0.2 };
 const CLIP_CACHE = 'ridonculous-stadium-mode-clips';
 // Inference blocks for seconds per phrase, so it runs in a worker to keep the app responsive.
 // Jobs are chained because the ONNX session can't run two at once.
@@ -282,12 +276,10 @@ onmessage = ({ data: { id, text, voice, speed } }) => {
 // Parts without a letter or digit (the "!" after a title truncated to "...") have nothing to say.
 const phrasesOf = (line) => line.split(/\.\.\.|(?<=[!?.])\s+/).map((part) => part.trim()).filter((part) => /[\p{L}\p{N}]/u.test(part));
 const fixedPhrases = (lines) => new Set(lines.flatMap(phrasesOf).filter((part) => !part.includes('{')));
-// Phrases without a task title, per voice; substitution first, it's the line most likely to stall.
-const FIXED_PHRASES = {
-  announcer: fixedPhrases([...LINES.substitution, ...LINES.kickoff, ...LINES.halftime]),
-  commentator: fixedPhrases([...LINES.goal, ...LINES.disallowed, ...LINES.redCard, ...LINES.postponed, ...LINES.transfer,
-    comboLine(2), comboLine(3), comboLine(4), paceLine({ timeEstimate: 10, timeSpent: 1 }), paceLine({ timeEstimate: 1, timeSpent: 10 })]),
-};
+// Phrases without a task title; substitution first, it's the line most likely to stall.
+const FIXED_PHRASES = fixedPhrases([...LINES.substitution, ...LINES.kickoff, ...LINES.halftime, ...LINES.goal, ...LINES.disallowed,
+  ...LINES.redCard, ...LINES.postponed, ...LINES.transfer,
+  comboLine(2), comboLine(3), comboLine(4), paceLine({ timeEstimate: 10, timeSpent: 1 }), paceLine({ timeEstimate: 1, timeSpent: 10 })]);
 
 let worker = null;
 let neuralReady = false;
@@ -302,7 +294,6 @@ const BACKGROUND = -1;
 const clips = new Map();
 const playing = new Set();
 let pa = null;
-let booth = null;
 // The neural line currently playing; a queued line waits for it.
 let onAir = Promise.resolve();
 
@@ -324,14 +315,14 @@ const loadNeural = (notify) => {
     stopNeural();
     // Stay on the system voice, as the snack says, instead of failing again on every start.
     window.localStorage.setItem(NEURAL_KEY, 'false');
-    PluginAPI.showSnack({ msg: 'Stadium Mode: the neural voices could not be loaded, using the system voice.', type: 'ERROR' });
+    PluginAPI.showSnack({ msg: 'Stadium Mode: the neural voice could not be loaded, using the system voice.', type: 'ERROR' });
   };
   worker.onerror = (event) => fail(event.message);
   worker.onmessage = ({ data }) => {
     if (data.ready) {
       neuralReady = true;
       warmUp();
-      if (notify) PluginAPI.showSnack({ msg: 'Michael and George are ready!', type: 'SUCCESS', ico: 'record_voice_over' });
+      if (notify) PluginAPI.showSnack({ msg: 'Michael is ready!', type: 'SUCCESS', ico: 'record_voice_over' });
     } else if (data.failed) fail(data.failed);
     else {
       const job = jobs.get(data.id);
@@ -348,25 +339,25 @@ const sendNextJob = () => {
   const job = queued.reduce((best, next) => (next.want.priority > best.want.priority ? next : best));
   queued.splice(queued.indexOf(job), 1);
   jobs.set(job.id, job);
-  worker.postMessage({ id: job.id, text: job.text, voice: NEURAL[job.voice].voice, speed: NEURAL[job.voice].speed });
+  worker.postMessage({ id: job.id, text: job.text, voice: NEURAL.voice, speed: NEURAL.speed });
 };
 
 // `want` is shared with the phrase's clip, so a line that needs a queued phrase can raise its priority.
-const generate = (text, voice, want) => new Promise((resolve, reject) => {
-  queued.push({ id: nextJob++, text, voice, want, resolve, reject });
+const generate = (text, want) => new Promise((resolve, reject) => {
+  queued.push({ id: nextJob++, text, want, resolve, reject });
   sendNextJob();
 });
 
 // Fixed phrases survive reloads in Cache Storage, so the warm-up runs once. Task titles stay in memory only,
 // so none end up on disk. The key includes the voice settings, so changing them regenerates everything.
-const stored = async (phrase, voice, want) => {
-  const url = `https://stadium-mode.invalid/${NEURAL[voice].voice}/${NEURAL[voice].speed}/${encodeURIComponent(phrase)}`;
-  const cache = FIXED_PHRASES[voice].has(phrase) && window.caches
+const stored = async (phrase, want) => {
+  const url = `https://stadium-mode.invalid/${NEURAL.voice}/${NEURAL.speed}/${encodeURIComponent(phrase)}`;
+  const cache = FIXED_PHRASES.has(phrase) && window.caches
     ? await window.caches.open(CLIP_CACHE).catch((error) => console.warn('[stadium-mode] no clip cache', error))
     : null;
   const hit = cache && await cache.match(url);
   if (hit) return { audio: new Float32Array(await hit.arrayBuffer()), rate: Number(hit.headers.get('x-sample-rate')) };
-  const result = await generate(phrase, voice, want);
+  const result = await generate(phrase, want);
   if (cache) {
     const response = new window.Response(result.audio, { headers: { 'x-sample-rate': String(result.rate) } });
     await cache.put(url, response).catch((error) => console.warn('[stadium-mode] could not store clip', error));
@@ -375,11 +366,11 @@ const stored = async (phrase, voice, want) => {
 };
 
 /** A phrase's audio, generated once. `priority` decides its place in the queue while it waits for the worker. */
-const clip = (ac, phrase, voice, priority = BACKGROUND) => {
-  const key = `${voice}:${phrase}`;
+const clip = (ac, phrase, priority = BACKGROUND) => {
+  const key = phrase;
   if (!clips.has(key)) {
     const want = { priority };
-    const buffer = stored(phrase, voice, want).then(({ audio, rate }) => {
+    const buffer = stored(phrase, want).then(({ audio, rate }) => {
       const result = ac.createBuffer(1, audio.length, rate);
       result.copyToChannel(audio, 0);
       return result;
@@ -434,23 +425,14 @@ const paInput = (ac) => {
   return pa;
 };
 
-/** The TV booth: no stadium echo, just less bass, like a commentary mic. */
-const boothInput = (ac) => {
-  if (!booth) booth = filter(ac, 'highpass', 150, master);
-  return booth;
-};
-
-// Generating is ~3x slower than speaking, so prepare the fixed phrases of both voices in the background.
+// Generating is ~3x slower than speaking, so prepare the fixed phrases in the background.
 // Then only task titles are generated live, and a line doesn't stall mid-sentence on first use.
-// The announcer's phrases come first; most of George's lines start with a cached phrase anyway.
 // One phrase at a time, at background priority, so a live line waits behind at most the phrase in progress.
 const warmUp = async () => {
   const ac = audio();
-  for (const voice of Object.keys(FIXED_PHRASES)) {
-    for (const part of FIXED_PHRASES[voice]) {
-      if (!neuralReady) return;
-      await clip(ac, part, voice).catch((error) => console.warn('[stadium-mode] warm-up failed', error));
-    }
+  for (const part of FIXED_PHRASES) {
+    if (!neuralReady) return;
+    await clip(ac, part).catch((error) => console.warn('[stadium-mode] warm-up failed', error));
   }
 };
 
@@ -463,11 +445,11 @@ const speechDone = () => new Promise((resolve) => {
  * Plays a line phrase by phrase, so cached phrases already play while a task title is generated.
  * Resolves when the line has finished or was cut off. `after` is a line to wait for (kick off after a goal).
  */
-const announce = async ({ line, voice, outro }, after) => {
+const announce = async ({ line, outro }, after) => {
   const current = generation;
   const ac = audio();
   // The newest line first, in line order; a line that was cut off falls behind it.
-  const parts = phrasesOf(line).map((part, index) => clip(ac, part, voice, current - index / 100));
+  const parts = phrasesOf(line).map((part, index) => clip(ac, part, current - index / 100));
   if (after) await Promise.all([after, speechDone()]);
   let at = 0;
   let last = null;
@@ -480,12 +462,12 @@ const announce = async ({ line, voice, outro }, after) => {
       }
       const source = ac.createBufferSource();
       source.buffer = buffer;
-      source.connect(voice === 'announcer' ? paInput(ac) : boothInput(ac));
+      source.connect(paInput(ac));
       at = Math.max(at, ac.currentTime);
       source.start(at);
       source.onended = () => playing.delete(source);
       playing.add(source);
-      at += buffer.duration + NEURAL[voice].pauseS;
+      at += buffer.duration + NEURAL.pauseS;
       last = source;
     }
   } catch (error) {
@@ -505,20 +487,20 @@ const announce = async ({ line, voice, outro }, after) => {
   });
 };
 
-const utter = (text, voice, volume) => {
+const utter = (text, volume) => {
   const utterance = new window.SpeechSynthesisUtterance(text);
-  Object.assign(utterance, VOICES[voice]);
+  Object.assign(utterance, VOICE);
   if (volume !== undefined) utterance.volume = volume;
   return utterance;
 };
 
-/** Speaks a reaction's line in its voice, then plays its outro cues when the line ends. */
-const say = ({ line, voice, outro }, queue) => {
+/** Speaks a reaction's line, then plays its outro cues when the line ends. */
+const say = ({ line, outro }, queue) => {
   // Newest call wins; a backlog of stale commentary is worse than a cut-off sentence.
   // shortcut: cancel() clears all speech in the renderer, also other plugins' (e.g. Voice Reminder)
   if (!queue) interrupt();
   if (neuralReady && line) {
-    onAir = announce({ line, voice, outro }, queue && onAir);
+    onAir = announce({ line, outro }, queue && onAir);
     return;
   }
   const synth = window.speechSynthesis;
@@ -526,19 +508,19 @@ const say = ({ line, voice, outro }, queue) => {
   // Linux Chromium/Electron has no voices unless started with --enable-speech-dispatcher; say so once.
   if (synth && !hasVoice && !warnedNoVoice) {
     warnedNoVoice = true;
-    PluginAPI.showSnack({ msg: 'Stadium Mode: no speech voice found, so the commentator is silent. See the plugin README.', type: 'WARNING' });
+    PluginAPI.showSnack({ msg: 'Stadium Mode: no speech voice found, so the announcer is silent. See the plugin README.', type: 'WARNING' });
   }
   if (!hasVoice || !line) {
     playCues(outro);
     return;
   }
   const current = generation;
-  const main = utter(line, voice);
+  const main = utter(line);
   main.onend = () => current === generation && playCues(outro);
   synth.speak(main);
   // Speech can't be routed through Web Audio for real reverb, so fake the PA echo off the stands.
-  const lastWord = voice === 'announcer' && (line.match(/([\p{L}\p{N}']+)[^\p{L}\p{N}]*$/u) || [])[1];
-  if (lastWord) [0.45, 0.2].forEach((volume) => synth.speak(utter(lastWord, voice, volume)));
+  const lastWord = (line.match(/([\p{L}\p{N}']+)[^\p{L}\p{N}]*$/u) || [])[1];
+  if (lastWord) [0.45, 0.2].forEach((volume) => synth.speak(utter(lastWord, volume)));
 };
 
 // ---------- Big screen: animations over the app, drawn in code ----------
@@ -684,12 +666,6 @@ const perform = (event, queue = false) => {
   playCues(result.cues);
   (queue ? showAfterScene : showOnScreen)(event, before, state);
   say(result, queue);
-  // The goal call comes later; George prepares the title while Michael is still announcing it.
-  if (neuralReady && (event.type === 'kickoff' || event.type === 'substitution')) {
-    for (const part of phrasesOf(`${shortTitle(event.task)}!`)) {
-      clip(audio(), part, 'commentator').catch((error) => console.warn('[stadium-mode] could not prepare a title', error));
-    }
-  }
 };
 
 const later = (fn) => {
@@ -762,7 +738,7 @@ const setMode = (mode) => {
   }
   if (mode === 'system') stopNeural();
   if (mode === 'neural' && !worker) {
-    PluginAPI.showSnack({ msg: 'Stadium Mode: loading Michael and George...', type: 'INFO', ico: 'campaign' });
+    PluginAPI.showSnack({ msg: 'Stadium Mode: loading Michael...', type: 'INFO', ico: 'campaign' });
     loadNeural(true);
     return;
   }
@@ -770,14 +746,14 @@ const setMode = (mode) => {
   perform({ type: 'kickoff', task: { title: 'Stadium Mode' } });
 };
 
-// One dialog for everything; picking Michael doubles as the consent for the neural download (both voices).
+// One dialog for everything; picking Michael doubles as the consent for the neural download.
 const chooseMode = async (firstRun) => {
   const mode = firstRun ? 'neural' : currentMode();
   const choice = await PluginAPI.openDialog({
     title: firstRun ? 'Welcome to Stadium Mode!' : 'Stadium Mode',
     htmlContent:
-      (firstRun ? '<p>Pick the voices for the stadium. You can change it later with the megaphone button in the header.</p>' : `<p>Currently: <strong>${MODES[mode]}</strong></p>`) +
-      '<p><strong>Michael</strong> is a neural stadium announcer (Kokoro) played through a stadium PA, and <strong>George</strong> joins him as the TV commentator.</p>' +
+      (firstRun ? '<p>Pick the voice for the stadium. You can change it later with the megaphone button in the header.</p>' : `<p>Currently: <strong>${MODES[mode]}</strong></p>`) +
+      '<p><strong>Michael</strong> is a neural stadium announcer (Kokoro) played through a stadium PA. He calls every moment of the match.</p>' +
       '<p>Choosing Michael downloads about <strong>110 MB</strong> once: code from <code>cdn.jsdelivr.net</code> and the voice model from <code>huggingface.co</code>. ' +
       'Speech is then generated on this device, so task titles are not sent anywhere. Expect the first lines to be a few seconds late.</p>',
     buttons: Object.entries(MODES).map(([key, label]) => ({ label, ...(key === mode ? { color: 'primary', raised: true } : {}) })),
