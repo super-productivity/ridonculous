@@ -1,0 +1,29 @@
+# Bump "version" in plugins/<name>/manifest.json and push to main: this publishes the
+# plugin ZIP as a GitHub release and writes its pinned listing entry (version, URL,
+# SHA-256) to the run summary, ready to paste into Super Productivity's
+# src/assets/community-plugins.json.
+name: Release plugins
+
+on:
+  push:
+    branches: [main]
+    paths: ['plugins/*/manifest.json']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency: release-plugins
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Release new plugin versions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node tools/release.cjs

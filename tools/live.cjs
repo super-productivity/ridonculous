@@ -6,6 +6,7 @@ const http = require('node:http');
 const { execFileSync } = require('node:child_process');
 const { createInterface } = require('node:readline');
 const { chromium } = require('playwright');
+const { packPlugin } = require('./pack.cjs');
 
 const root = path.resolve(__dirname, '..');
 const args = process.argv.slice(2);
@@ -25,12 +26,7 @@ let server, context, terminal, temporaryProfile;
 
 async function install(page, baseUrl, manifest) {
   const archive = path.join(localDir, `${pluginName}.zip`);
-  // Only portable runtime files belong in an uploaded plugin, never node_modules or tests.
-  const files = ['manifest.json'];
-  for (const name of ['index.html', 'plugin.js', 'icon.svg', 'i18n']) {
-    if (await fs.stat(path.join(pluginDir, name)).catch(() => null)) files.push(name);
-  }
-  execFileSync('python3', ['-m', 'zipfile', '-c', archive, ...files], { cwd: pluginDir });
+  packPlugin(pluginDir, archive);
   // A dialog the plugin left open (e.g. a welcome prompt) would block the settings clicks below.
   for (let i = 0; i < 5 && await page.locator('mat-dialog-container').count(); i++) {
     await page.keyboard.press('Escape');

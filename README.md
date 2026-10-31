@@ -62,6 +62,10 @@ This verifies real app startup, ZIP installation, the task API, and reinstallati
 
 The launcher currently supports plugins with a self-contained `index.html` view. It packages `manifest.json`, `index.html`, and optional `plugin.js`, `icon.svg`, and `i18n/`. Build compiled plugins before reloading. Runtime code and assets must follow the host's self-contained iframe contract. Port 4173 must be free; a busy port fails rather than attaching to another app.
 
+## Release a plugin
+
+Bump `version` in the plugin's `manifest.json` and push to `main`; changing plugin code without a bump releases nothing. The [release workflow](.github/workflows/release.yml) packs the ZIP, publishes it as the release `<folder>-v<version>`, and writes the pinned `release` entry (version, download URL, SHA-256) to the run summary. Paste it into [Super Productivity's community-plugins.json](https://github.com/super-productivity/super-productivity/blob/master/src/assets/community-plugins.json) in a PR; users get one-click **Install** or **Update** once that ships in an app release.
+
 ## Start an experiment
 
 Give each plugin its own folder under `plugins/`, for example `plugins/task-confetti/`. Keep its source, assets, and any build configuration together so it can be understood on its own.
