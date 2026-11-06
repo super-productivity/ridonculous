@@ -1,0 +1,1114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Procrastination Cat Court</title>
+<style>
+/* Controls use the host UI kit; only the illustrated court and its layout are custom. */
+:root { --surface:var(--card-bg, #fff); --ink:var(--text-color, #222); --muted:var(--text-color-muted, #666); --accent:var(--c-primary, #0056c9); --line:var(--divider-color, #ddd); --green:var(--color-success, #27834a); }
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+body { margin:0; background:var(--bg, #fafafa); color:var(--ink); font:var(--font-size-md, 14px)/1.55 var(--font-primary-stack, system-ui, sans-serif); }
+fieldset[aria-busy="true"] button { cursor:wait; }
+button,input { -webkit-tap-highlight-color:transparent; }
+[tabindex="-1"]:focus-visible { outline:2px solid var(--focus-ring-color, var(--accent)); outline-offset:3px; }
+button svg { width:19px; height:19px; flex-shrink:0; }
+h1,h2,h3,p { margin:0; }
+.shell { max-width:960px; margin:auto; padding:var(--s2, 16px); }
+.eyebrow { font-size:10px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; }
+h1 { font-size:var(--font-size-2xl, 24px); font-weight:var(--font-weight-semibold, 600); line-height:1.25; margin-top:3px; }
+.demo { margin-top:8px; text-align:center; background:var(--state-selected, #e6eef9); color:var(--ink); border-radius:var(--radius-xs, 4px); font-size:10px; font-weight:600; padding:5px 8px; letter-spacing:.06em; text-transform:uppercase; }
+.notice { position:sticky; top:12px; z-index:2; padding:var(--s2, 16px); margin-bottom:16px; background:color-mix(in srgb, var(--color-warning, #bc7800) 12%, var(--surface)); border:1px solid var(--color-warning, #bc7800); border-radius:var(--card-border-radius, 8px); font-size:var(--font-size-sm, 13px); }
+.notice:empty { display:none; }
+fieldset { border:0; padding:0; margin:0; min-inline-size:0; }
+.court { border:1px solid var(--line); border-radius:var(--card-border-radius, 8px); overflow:hidden; background:var(--surface); }
+.picker { width:560px; max-width:calc(100% - 24px); max-height:calc(100dvh - 32px); padding:0; overflow:hidden; }
+.picker .notice { position:static; margin:0 0 12px; color:var(--ink); }
+.picker-close { font-size:24px; line-height:1; flex-shrink:0; }
+.docket { max-height:calc(100dvh - 34px); padding:var(--s3, 24px); display:flex; flex-direction:column; min-width:0; }
+.docket-top { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+.docket h2 { font-size:var(--font-size-xl, 20px); }
+.docket-intro { font-size:var(--font-size-sm, 13px); color:var(--muted); margin:5px 0 22px; }
+.filters { display:flex; gap:4px; border-bottom:1px solid var(--line); margin:18px 0 12px; }
+.filters button { border-bottom:2px solid transparent; }
+.filters button[aria-pressed="true"] { border-bottom-color:var(--accent); }
+.case-list { list-style:none; padding:0; margin:0; min-height:0; max-height:min(45dvh,380px); overflow:auto; }
+.case-item { width:100%; padding:12px var(--s2, 16px); display:block; text-align:left; margin-bottom:4px; }
+.case-item small { display:block; font-size:var(--font-size-xs, 11px); color:var(--muted); margin-bottom:5px; }
+.case-item strong { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; font-size:13px; font-weight:550; line-height:1.5; overflow-wrap:anywhere; }
+.case-item .case-meta { display:block; font-size:var(--font-size-xs, 12px); color:var(--muted); margin-top:6px; }
+.docket-empty { font-size:13px; padding:12px 5px; color:var(--muted); }
+.chamber { padding:20px; min-width:0; position:relative; }
+.welcome { text-align:center; padding:26px 12px 10px; }
+.judge .cat-body { transform-origin:100px 138px; animation:breathe 4s ease-in-out infinite; }
+.judge .head { transform-origin:100px 112px; }
+.judge .tail { transform-origin:131px 137px; animation:tail-swish 4s ease-in-out infinite; }
+.judge .ear-left { transform-origin:77px 73px; }
+.judge .paw { transform-origin:62px 132px; }
+.judge .gavel-arm { transform-origin:166px 129px; }
+.judge .blink { transform-origin:100px 87px; animation:blink 7s infinite; }
+.judge .happy-eyes,.judge .yawn,.judge .heart,.judge .thought { opacity:0; }
+.judge[data-pose="welcome"] .head { animation:bow 1.2s ease-in-out; }
+.judge[data-pose="welcome"] .paw { animation:paw-wave 1.5s ease-in-out; }
+.judge[data-pose="listen"] .ear-left { animation:ear-twitch .8s ease-in-out; }
+.judge[data-pose="big"] .head { animation:sympathetic-tilt 1.7s ease-in-out; }
+.judge[data-pose="unclear"] .head,.judge[data-pose="consider"] .head { animation:ponder 1.8s ease-in-out; }
+.judge[data-pose="unclear"] .paw,.judge[data-pose="consider"] .paw { animation:chin-scratch 1.8s ease-in-out; }
+.judge[data-pose="unclear"] .thought { animation:thought 1.8s ease-in-out; }
+.judge[data-pose="boring"] .head { animation:cat-stretch 1.8s ease-in-out; }
+.judge[data-pose="boring"] .blink { animation:sleepy-eyes 1.8s ease-in-out,blink 7s 1.8s infinite; }
+.judge[data-pose="boring"] .yawn { animation:yawn 1.8s ease-in-out; }
+.judge[data-pose="boring"] .smile { animation:hide-smile 1.8s ease-in-out; }
+.judge[data-pose="irrelevant"] .head { animation:sympathetic-tilt 1.7s ease-in-out; }
+.judge[data-pose="irrelevant"] .heart { animation:little-heart 2s ease-out; }
+.judge[data-pose="verdict"] .gavel-arm { animation:gavel-tap .9s ease-in-out; }
+.judge.judge[data-pose="verdict"] .heart { animation:little-heart 2s .45s ease-out; }
+.judge[data-pose="verdict"] .blink { opacity:0; }
+.judge[data-pose="verdict"] .happy-eyes { opacity:1; }
+.judge[data-pose="pet"] .blink { opacity:0; }
+.judge[data-pose="pet"] .happy-eyes { opacity:1; }
+.judge[data-pose="pet"] .paw { animation:paw-wave 1.5s ease-in-out; }
+.cat-cast { display:flex; align-items:flex-end; justify-content:center; gap:12px; width:min(100%,420px); margin:auto; }
+.cat-card { flex:1; min-width:0; text-align:center; }
+.cat-card.judge-card { flex:1.15; }
+.pet-cat { display:block; width:100%; padding:0; border:0; border-radius:40% 40% 12px 12px; background:transparent; color:inherit; position:relative; }
+.pet-cat:hover { background:var(--state-hover, #00000008); }
+.pet-cat::after { content:'♡'; position:absolute; right:10%; top:12%; opacity:0; color:#aa6576; font-size:22px; transition:opacity .2s; }
+.pet-cat:hover::after,.pet-cat:focus-visible::after { opacity:1; }
+.cat-card .judge,.cat-card .prosecutor { display:block; width:100%; height:auto; aspect-ratio:200 / 188; margin:0; overflow:visible; }
+.cat-name { display:block; font-size:14px; font-weight:600; color:var(--ink); margin-top:3px; }
+.cat-job { display:block; color:var(--muted); font-size:9px; letter-spacing:.06em; margin-top:3px; }
+.cat-caption { color:var(--muted); font-size:11px; text-align:center; margin:14px 0 0; min-height:18px; }
+#hearing-judge .cat-cast { max-width:300px; }
+#hearing-judge .cat-name { font-size:13px; }
+#hearing-judge .cat-job { display:none; }
+#hearing-judge .cat-caption { display:none; }
+#outcome-judge { margin-bottom:24px; }
+#outcome-judge .cat-cast { max-width:300px; }
+.prosecutor .pounce-head { transform-origin:100px 113px; }
+.prosecutor .pounce-tail { transform-origin:136px 143px; animation:tail-swish 4.5s ease-in-out infinite; }
+.prosecutor .pounce-eyes { transform-origin:100px 83px; animation:blink 6s 1.5s infinite; }
+.prosecutor .case-folder { transform-origin:100px 145px; }
+.prosecutor .pounce-happy,.prosecutor .pounce-heart { opacity:0; }
+.prosecutor[data-pose="welcome"] .pounce-head { animation:bow 1.2s .2s ease-in-out; }
+.prosecutor[data-pose="listen"] .case-folder,.prosecutor[data-pose="big"] .case-folder,.prosecutor[data-pose="unclear"] .case-folder { animation:paper-rustle 1.2s ease-in-out; }
+.prosecutor[data-pose="boring"] .pounce-head,.prosecutor[data-pose="consider"] .pounce-head { animation:ponder 1.8s ease-in-out; }
+.prosecutor[data-pose="irrelevant"] .pounce-head { animation:sympathetic-tilt 1.7s ease-in-out; }
+.prosecutor.prosecutor[data-pose="pet"] .pounce-eyes,.prosecutor[data-pose="verdict"] .pounce-eyes { opacity:0; }
+.prosecutor[data-pose="pet"] .pounce-happy,.prosecutor[data-pose="verdict"] .pounce-happy { opacity:1; }
+.prosecutor[data-pose="verdict"] .pounce-heart { animation:little-heart 2s ease-out; }
+@keyframes paper-rustle { 0%,100% { transform:rotate(0) translateY(0); } 25%,65% { transform:rotate(-4deg) translateY(-4px); } 45%,80% { transform:rotate(3deg) translateY(-3px); } }
+@keyframes breathe { 0%,100% { transform:scaleY(1); } 50% { transform:scaleY(1.025); } }
+@keyframes tail-swish { 0%,100% { transform:rotate(-5deg); } 50% { transform:rotate(9deg); } }
+@keyframes blink { 0%,44%,48%,100% { transform:scaleY(1); } 46% { transform:scaleY(.08); } }
+@keyframes bow { 0%,100% { transform:translateY(0) rotate(0); } 45% { transform:translateY(5px) rotate(-6deg); } 75% { transform:translateY(-2px) rotate(2deg); } }
+@keyframes paw-wave { 0%,100% { transform:translateY(0) rotate(0); } 25%,65% { transform:translateY(-17px) rotate(-18deg); } 45%,80% { transform:translateY(-17px) rotate(15deg); } }
+@keyframes ear-twitch { 0%,50%,100% { transform:rotate(0); } 25%,75% { transform:rotate(-12deg); } }
+@keyframes sympathetic-tilt { 0%,100% { transform:rotate(0); } 35%,65% { transform:rotate(-9deg) translateY(2px); } }
+@keyframes ponder { 0%,100% { transform:rotate(0); } 30%,70% { transform:rotate(8deg) translateY(-1px); } }
+@keyframes chin-scratch { 0%,100% { transform:translate(0,0); } 30%,65% { transform:translate(25px,-24px) rotate(-20deg); } 45%,80% { transform:translate(23px,-22px) rotate(-12deg); } }
+@keyframes thought { 0%,100% { opacity:0; } 30%,75% { opacity:1; } }
+@keyframes cat-stretch { 0%,100% { transform:translateY(0) rotate(0); } 35%,60% { transform:translateY(-4px) rotate(-5deg); } }
+@keyframes sleepy-eyes { 0%,100% { transform:scaleY(1); } 25%,75% { transform:scaleY(.12); } }
+@keyframes yawn { 0%,20%,85%,100% { opacity:0; } 35%,65% { opacity:1; } }
+@keyframes hide-smile { 0%,20%,85%,100% { opacity:1; } 35%,65% { opacity:0; } }
+@keyframes little-heart { 0% { opacity:0; transform:translateY(8px); } 25%,65% { opacity:1; } 100% { opacity:0; transform:translateY(-16px); } }
+@keyframes gavel-tap { 0%,100% { transform:rotate(0); } 28% { transform:rotate(48deg); } 45% { transform:rotate(-8deg); } 61% { transform:rotate(12deg); } 78% { transform:rotate(0); } }
+@keyframes proud-nod { 0%,100% { transform:translateY(0); } 30% { transform:translateY(-3px); } 45%,72% { transform:translateY(3px) rotate(-3deg); } 58%,86% { transform:translateY(0); } }
+.welcome .eyebrow { color:var(--accent); margin:14px 0 12px; }
+.welcome h2 { font-size:clamp(24px, 4vw, var(--font-size-3xl, 32px)); line-height:1.2; }
+.welcome .lede { max-width:380px; margin:17px auto 23px; color:var(--muted); font-size:14px; }
+.welcome-note { display:flex; gap:10px; align-items:center; justify-content:center; margin-top:30px; font-family:Georgia,serif; font-style:italic; font-size:13px; color:var(--muted); }
+.welcome-note::before,.welcome-note::after { content:''; height:1px; width:30px; background:var(--line); }
+.file-title { font-size:var(--font-size-xl, 22px); line-height:1.3; margin:11px 0 12px; overflow-wrap:anywhere; }
+.evidence { color:var(--muted); font-size:11px; padding-bottom:21px; border-bottom:1px solid var(--line); }
+.section-heading { font-size:var(--font-size-lg, 18px); margin:22px 0 4px; }
+.hint { font-size:12px; color:var(--muted); }
+.pleas { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0; }
+.plea { display:flex; align-items:flex-start; justify-content:flex-start; gap:11px; padding:14px 12px; text-align:left; border-radius:var(--card-border-radius, 8px); }
+.plea[aria-pressed="true"] { border-color:var(--accent); }
+.plea svg { margin-top:2px; color:var(--accent); width:21px; height:21px; }
+.plea strong { display:block; font-size:12px; font-weight:600; }
+.plea small { display:block; font-size:11px; color:var(--muted); margin-top:2px; }
+.judge-note { padding:12px 0 0; }
+
+.action-row { display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-top:14px; }
+.verdicts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin:12px 0; }
+.verdict { display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-start; gap:8px; padding:15px; border-radius:var(--card-border-radius, 8px); text-align:left; }
+.verdict > span:last-child { display:none; }
+.verdict:hover { border-color:var(--accent); }
+.verdict.recommended { border-color:var(--accent); background-color:var(--state-selected, #e6eef9); }
+.verdict .numeral { font-family:Georgia,serif; font-size:24px; color:var(--accent); }
+.verdict strong { display:block; font-size:16px; font-weight:var(--font-weight-medium, 500); }
+.verdict small { display:block; color:var(--muted); font-size:11px; margin-top:3px; }
+.recommendation { color:var(--accent); font-size:9px; text-transform:uppercase; font-weight:700; letter-spacing:.08em; }
+.shrink-form { border:1px solid var(--line); background:var(--bg, #fafafa); border-radius:var(--card-border-radius, 8px); padding:18px; margin:16px 0; }
+.shrink-form label { display:block; font-size:13px; font-weight:600; margin-bottom:8px; }
+.shrink-form .hint { margin:9px 0 14px; }
+.outcome { text-align:center; padding:35px 0 10px; }
+.stamp { display:inline-block; padding:8px 18px; border:3px double var(--green); border-radius:4px; color:var(--green); font-size:13px; font-weight:800; letter-spacing:.13em; text-transform:uppercase; transform:rotate(-5deg); margin:0 0 25px; }
+@keyframes stamp { from { opacity:0; transform:scale(1.5) rotate(-10deg); } to { opacity:1; transform:scale(1) rotate(-5deg); } }
+.outcome h3 { font-size:var(--font-size-2xl, 24px); line-height:1.25; }
+.outcome-copy { max-width:410px; margin:16px auto 0; color:var(--muted); font-size:14px; }
+.step-title { font-family:Georgia,serif; font-style:italic; font-size:22px; margin:20px 0; overflow-wrap:anywhere; }
+.outcome .primary { margin-top:22px; }
+.outcome .text-button { display:block; margin:27px auto 0; }
+@media (max-width:950px) { .shell { padding:20px 18px; } .chamber { padding:18px; } .docket { padding:23px 15px; } .pleas { grid-template-columns:1fr; } }
+@media (max-width:650px) {
+ .shell { padding:20px 12px 14px; }     .docket { padding:20px; } .docket-intro { margin-bottom:14px; } .filters { margin-top:12px; } .chamber { padding:20px; }   .welcome { padding:20px 0; } .pleas { grid-template-columns:1fr 1fr; } .plea { gap:8px; padding:12px 10px; }
+}
+@media (max-width:650px) {    .judge-note { display:block; } .cat-name { font-size:13px; } .cat-job { font-size:8px; } .cat-cast { gap:6px; } }
+@media (max-width:370px) { .pleas { grid-template-columns:1fr; } .chamber,.docket { padding:17px; }  .verdict { gap:8px; padding:12px; } }
+.still *,.still *::before,.still *::after { animation:none !important; transition:none !important; }
+@media (max-height:500px) { .docket { padding:14px 18px; } .docket-intro { margin:0 0 10px; } .filters { margin:8px 0; } .search { padding:8px 12px; } .case-item { padding:10px 12px; } }
+@media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
+.cat-backdrop { fill:color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.cat-backdrop-line { stroke:var(--line); }
+.cat-ground { fill:color-mix(in srgb, var(--ink) 10%, transparent); }
+
+/* Small character reactions; the surrounding controls keep the host's theme. */
+.talking-mouth,.sleeping-cat { display:none; }
+[data-voice="meow"] .talking-mouth { display:block; transform-box:fill-box; transform-origin:center; animation:miau-mouth .72s both; }
+[data-voice="meow"] .smile { opacity:0; }
+[data-voice="meow"] .ear-left { animation:ear-twitch .72s both; }
+[data-voice="meow"] .pounce-ears { transform-origin:100px 75px; animation:ear-twitch .72s both; }
+[data-voice="purr"] .blink,[data-voice="purr"] .pounce-eyes { opacity:0; }
+[data-voice="purr"] .happy-eyes,[data-voice="purr"] .pounce-happy { opacity:1; }
+.judge[data-pose="pet"] .head,.prosecutor[data-pose="pet"] .pounce-head { animation:lean-scritch 1.7s ease-in-out; }
+[data-pose="pet"] .pounce-brows { opacity:0; }
+[data-pose="pet"] .case-folder { transform:translateY(4px) rotate(3deg); }
+.pet-cat:has(.pet-heart)::after { opacity:0; }
+.pet-heart { position:absolute; left:var(--touch-x,50%); top:var(--touch-y,35%); pointer-events:none; color:var(--accent); font-size:22px; line-height:1; animation:touch-heart 1.6s ease-out both; }
+[data-pose="sleep"] .awake-cat { display:none; }
+[data-pose="sleep"] .sleeping-cat { display:block; transform-origin:100px 150px; animation:nap-breath 6s ease-in-out infinite; }
+.judge[data-pose="verdict"] .head { animation:proud-nod 1s .42s both; }
+.prosecutor[data-pose="verdict"] .pounce-head { animation:proud-nod 1s .5s both; }
+.outcome.arrive .stamp { animation:stamp .35s .88s both; }
+.stamp svg { width:20px; height:20px; vertical-align:middle; margin-right:8px; fill:currentColor; }
+
+.cozy .outcome { padding-top:24px; }
+.cozy #outcome-judge .cat-cast { max-width:360px; }
+@keyframes miau-mouth { 0%,100% { transform:scale(.7,.2); } 18% { transform:scale(.8,1); } 42% { transform:scale(1.2,.65); } 65% { transform:scale(.75,1); } }
+@keyframes lean-scritch { 0%,100% { transform:translateX(0) rotate(0); } 25%,65% { transform:translateX(var(--lean-x,0px)) rotate(var(--lean-angle,-7deg)); } 45%,80% { transform:translateX(var(--lean-x,0px)) rotate(0); } }
+@keyframes touch-heart { from { opacity:0; transform:translate(-50%,0) scale(.5); } 20% { opacity:1; } to { opacity:0; transform:translate(-50%,-40px) scale(1.1); } }
+@keyframes nap-breath { 0%,100% { transform:scaleY(1); } 50% { transform:scaleY(1.015); } }
+.still .pet-heart { opacity:0; }
+@media (prefers-reduced-motion:reduce) { .pet-heart { display:none; } }
+
+
+.prosecutor[data-pose="arrival"] .awake-cat { animation:carry-case 1s ease-out both; }
+.prosecutor[data-pose="arrival"] .case-folder { animation:place-case 1.1s ease-in-out both; }
+.sneeze-bubble { display:none; position:absolute; top:6%; left:5%; right:5%; color:var(--accent); font-weight:600; font-size:12px; pointer-events:none; }
+.pet-cat:has([data-pose="sneeze"]) .sneeze-bubble { display:block; }
+.sneeze-bubble span { display:block; animation:objection .55s step-end both; }
+.sneeze-bubble span:last-child { position:absolute; inset:0; animation:achoo 1.3s step-end both; }
+.prosecutor[data-pose="sneeze"] .pounce-head { animation:sneeze 1.3s ease-in-out both; }
+.prosecutor[data-pose="sneeze"] .pounce-eyes { animation:sneeze-eyes 1.3s both; }
+.nap-open { opacity:0; }
+.cozy .nap-open { animation:peek 47s linear infinite; }
+.cozy .nap-lid { animation:peek-lid 47s linear infinite; }
+.cozy #prosecutor .nap-open,.cozy #prosecutor .nap-lid { animation-duration:61s; }
+.away .nap-open,.away .nap-lid { animation-play-state:paused; }
+.defense-scene { display:flex; align-items:center; gap:14px; margin:12px 0; }
+.defense-scene svg { width:64px; height:64px; flex-shrink:0; color:var(--accent); }
+.defense-scene strong { display:block; font-size:14px; margin-bottom:4px; }
+.defense-scene .scene-detail { stroke:currentColor; fill:none; stroke-width:1.5; stroke-linecap:round; }
+.defense-scene .foothold { animation:foothold .9s ease-out both; }
+.defense-scene .fog { animation:clear-fog 1.2s ease-out both; }
+.defense-scene .steam { animation:warm-cup 1.2s ease-out both; }
+.defense-scene .loose-leaf { transform-origin:32px 32px; animation:release-leaf 1.2s ease-out both; }
+@keyframes carry-case { from { transform:translateX(-35px) rotate(-5deg); opacity:.3; } 65% { transform:translateX(3px) rotate(2deg); } to { transform:none; opacity:1; } }
+@keyframes place-case { 0%,50% { transform:translateY(-8px) scale(1.08); } to { transform:translate(18px,4px) rotate(-4deg); } }
+@keyframes objection { 0% { opacity:1; } 100% { opacity:0; } }
+@keyframes achoo { 0% { opacity:0; } 42% { opacity:1; } 100% { opacity:0; } }
+@keyframes sneeze { 0%,100% { transform:none; } 30% { transform:translateY(-3px) rotate(-5deg); } 43% { transform:translateY(5px) rotate(10deg); } 60% { transform:rotate(-3deg); } }
+@keyframes sneeze-eyes { 0%,25%,85%,100% { transform:scaleY(1); } 35%,65% { transform:scaleY(.08); } }
+@keyframes peek { 0%,92%,98%,100% { opacity:0; } 94%,96% { opacity:1; } }
+@keyframes peek-lid { 0%,92%,98%,100% { opacity:1; } 94%,96% { opacity:0; } }
+@keyframes foothold { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+@keyframes clear-fog { from { opacity:1; transform:translateX(0); } to { opacity:.18; transform:translateX(9px); } }
+@keyframes warm-cup { from { opacity:0; transform:translateY(4px); } to { opacity:.7; transform:translateY(-3px); } }
+@keyframes release-leaf { from { transform:translate(-5px,-6px) rotate(-18deg); } to { transform:none; } }
+@media (max-width:650px) {
+ .shell { padding:12px 10px; }   h1 { font-size:20px; }   
+ button,input { min-height:44px; } .picker-close { min-width:44px; }
+ .chamber,.docket { padding:14px; } 
+ .file-title { font-size:20px; margin:8px 0; } .evidence { padding-bottom:10px; }
+ .welcome { padding:12px 0 4px; } .welcome .cat-cast { max-width:270px; } .welcome .cat-job { display:none; } .welcome .eyebrow { margin:10px 0 8px; }
+ .welcome .lede { margin:12px auto 16px; } .welcome-note { margin-top:18px; }
+ .judge-note { padding:8px 0 0; margin:0; } #hearing-judge .cat-cast { max-width:190px; } #hearing-judge .cat-name { font-size:11px; } #hearing-judge .cat-caption { margin:4px 0 8px; font-size:10px; }
+
+ .section-heading { margin-top:12px; } .pleas { gap:8px; margin:12px 0; } .plea { padding:10px 8px; }
+ .defense-scene { gap:10px; } .defense-scene svg { width:48px; height:48px; }
+ .outcome { padding-top:18px; } #outcome-judge { margin-bottom:16px; } .cozy #outcome-judge .cat-cast { max-width:270px; }
+}
+
+.miau-bubble { display:none; position:absolute; z-index:1; top:4%; left:50%; transform:translateX(-50%); padding:3px 9px; border:1px solid var(--line); border-radius:12px; background:var(--surface); color:var(--muted); font-size:11px; white-space:nowrap; pointer-events:none; }
+.pet-cat:has([data-chat]) .miau-bubble { display:block; }
+.cat-card:has([data-chat]) .cat-name { color:var(--accent); }
+.speech.is-speaking { --bubble-line:color-mix(in srgb, var(--accent) 25%, var(--line)); }
+
+.court-tools { display:flex; justify-content:space-between; align-items:center; min-height:44px; margin:-12px -8px 8px; }
+.court-tools > div { display:flex; gap:2px; margin-left:auto; flex-shrink:0; }
+#case-navigation { display:flex; align-items:center; justify-content:space-between; gap:8px; flex:1; min-width:0; }
+#hearing-phase { color:var(--accent); min-width:0; }
+#change-case { min-height:44px; flex-shrink:0; }
+.court-tools { gap:8px; }
+@media (max-width:650px) { #hearing-phase { font-size:9px; letter-spacing:.08em; } #change-case { padding:0 6px; font-size:12px; } }
+@media (max-width:370px) { #change-case { max-width:58px; white-space:normal; line-height:1.2; } .court-tools { gap:2px; } }
+.speech { --bubble-bg:color-mix(in srgb, var(--accent) 4%, var(--surface)); --bubble-line:color-mix(in srgb, var(--line) 55%, transparent); display:none; position:relative; padding:10px 12px; border:1px solid var(--bubble-line); border-radius:14px; background:var(--bubble-bg); color:var(--muted); text-align:center; font-size:12px; line-height:1.45; overflow-wrap:anywhere; }
+.speech::after { content:''; position:absolute; left:50%; bottom:-6px; width:10px; height:10px; background:var(--bubble-bg); border-right:1px solid var(--bubble-line); border-bottom:1px solid var(--bubble-line); transform:translateX(-50%) rotate(45deg); }
+#hearing-judge .cat-cast { width:min(100%,560px); max-width:560px; align-items:stretch; gap:20px; }
+#hearing-judge .cat-card { flex:1; display:flex; flex-direction:column; align-items:center; }
+#hearing-judge .speech { display:block; flex:1; width:100%; margin-bottom:8px; }
+#hearing-judge .pet-cat { max-width:140px; }
+#hearing[data-stage="shrink"] .speech[data-cat="prosecutor"] { visibility:hidden; }
+#hearing-judge .miau-bubble { top:18%; }
+@media (max-width:650px) { #hearing-judge .cat-cast { gap:12px; } .speech { padding:9px; font-size:12px; } #hearing-judge .pet-cat { max-width:115px; } }
+
+.court-tools .btn-icon { width:44px; height:44px; color:var(--muted); border:0; background:transparent; }
+.court-tools .btn-icon:hover,.court-tools .btn-icon:focus-visible { color:var(--accent); background:var(--state-hover, #00000008); }
+.court-tools [aria-pressed="false"] .on,.court-tools [aria-pressed="true"] .off { display:none; }
+/* Every hearing uses the same stage, with one decision beneath it. */
+.scene-stage { border:1px solid var(--line); border-radius:16px 16px 4px 4px; padding:14px; background:radial-gradient(ellipse at 50% 25%,color-mix(in srgb,var(--accent) 13%,var(--surface)),var(--surface) 72%); text-align:center; }
+.case-brief { max-width:660px; margin:auto; padding:12px 18px; border:1px solid var(--line); border-radius:8px; background:var(--surface); box-shadow:0 5px 0 color-mix(in srgb,var(--accent) 10%,var(--surface)); }
+.case-brief .eyebrow { color:var(--accent); }
+.case-brief .file-title { font-size:clamp(22px,3.5vw,30px); font-weight:600; margin:8px 0; line-height:1.25; }
+.case-brief .evidence { padding:0; border:0; font-size:11px; }
+#case-controls { max-width:660px; margin:auto; text-align:center; }
+.section-heading { font-size:clamp(22px,3vw,28px); line-height:1.25; margin:16px 0 8px; }
+#pleading,#ruling,#shrink-form,.outcome { animation:scene-enter .3s ease-out both; }
+.pleas { grid-template-columns:1fr 1fr; }
+.plea { min-height:64px; }
+.plea[aria-pressed="true"] { box-shadow:inset 3px 0 var(--accent); }
+.defense-scene { max-width:480px; text-align:left; margin:10px auto; }
+.action-row { justify-content:center; }
+.shrink-form { border:0; background:transparent; padding:0; margin:0; }
+.shrink-form label { text-align:left; margin-top:20px; }
+.shrink-form .action-row { margin-bottom:8px; }
+.outcome { padding:20px 0 8px; }
+.outcome .stamp { margin-bottom:18px; }
+#outcome-judge { margin-bottom:16px; }
+#outcome-judge .cat-caption { display:none; }
+#hearing[data-stage="outcome"] #case-controls { display:none; }
+#hearing.cozy .evidence { display:none; }
+.welcome { border:1px solid var(--line); border-radius:16px 16px 4px 4px; background:radial-gradient(ellipse at 50% 25%,color-mix(in srgb,var(--accent) 13%,var(--surface)),var(--surface) 72%); }
+.welcome .cat-cast { max-width:340px; }
+@keyframes scene-enter { from { opacity:.4; transform:translateY(8px); } to { opacity:1; transform:none; } }
+@media (max-width:650px) { .court-tools { margin:-6px -6px 6px; } .scene-stage { padding:12px; } .case-brief { padding:10px; } .section-heading { font-size:23px; } }
+@media (max-width:650px) { .verdicts { grid-template-columns:1fr; } .verdict { flex-direction:row; align-items:center; gap:12px; } .verdict .numeral { min-width:25px; } }
+@media (max-width:370px) { .pleas { grid-template-columns:1fr; } .scene-stage { padding:12px 8px; } }
+
+
+.scene-stage { position:relative; isolation:isolate; overflow:hidden; }
+.opening::before,.opening::after { content:''; position:absolute; z-index:3; top:0; bottom:0; width:51%; pointer-events:none; background:repeating-linear-gradient(90deg,color-mix(in srgb,var(--accent) 30%,var(--surface)) 0px,color-mix(in srgb,var(--accent) 16%,var(--surface)) 24px,color-mix(in srgb,var(--accent) 30%,var(--surface)) 48px); border-bottom:5px solid color-mix(in srgb,var(--accent) 55%,var(--surface)); }
+.opening::before { left:0; transform:translateX(-103%); animation:curtain-left 1.2s cubic-bezier(.22,.7,.3,1) both; }
+.opening::after { right:0; transform:translateX(103%); animation:curtain-right 1.2s cubic-bezier(.22,.7,.3,1) both; }
+.opening .case-brief { animation:present-case 1.2s ease-out both; }
+.opening .speech { animation:bubble-arrival .25s 1.5s ease-out both; }
+@keyframes bubble-arrival { from { opacity:0; } to { opacity:1; } }
+@keyframes curtain-left { from { transform:translateX(0); } to { transform:translateX(-103%); } }
+@keyframes curtain-right { from { transform:translateX(0); } to { transform:translateX(103%); } }
+@keyframes present-case { 0%,25% { opacity:.3; transform:translateY(20px) scale(.95) rotate(-2deg); } 75% { opacity:1; transform:translateY(-2px); } to { opacity:1; transform:none; } }
+
+@layer court-preview {
+ .standalone button,.standalone input { font:inherit; }
+ .standalone button { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:40px; padding:0 16px; border:1px solid var(--line); border-radius:4px; background:transparent; color:var(--ink); cursor:pointer; }
+ .standalone button:hover:not(:disabled) { background-image:linear-gradient(#00000008,#00000008); }
+ .standalone button:disabled { opacity:.5; cursor:default; }
+ .standalone button[aria-pressed="true"] { background-color:var(--state-selected, #e6eef9); }
+ .standalone .btn-primary { background-color:var(--accent); border-color:transparent; color:var(--c-contrast, #fff); }
+ .standalone .btn-text { border-color:transparent; padding:0 8px; }
+ .standalone .btn-icon { width:40px; min-width:40px; padding:0; border-color:transparent; border-radius:50%; }
+ .standalone input { width:100%; min-height:40px; padding:8px 16px; border:1px solid var(--input-border-color, var(--line)); border-radius:8px; background:var(--input-bg, #f3f3f3); color:var(--ink); }
+ .standalone label { display:block; margin-bottom:4px; color:var(--muted); font-size:13px; }
+ .standalone :focus-visible { outline:2px solid var(--focus-ring-color, var(--accent)); outline-offset:3px; }
+ .standalone dialog { border:0; border-radius:12px; background:var(--surface); color:var(--ink); box-shadow:0 12px 32px #0004; }
+ .standalone dialog::backdrop { background:#0006; }
+}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+ <symbol id="mountain" viewBox="0 0 24 24"><path d="m2 20 8-16 5 10 3-5 5 11H2Zm5-10 3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+ <symbol id="cloud" viewBox="0 0 24 24"><path d="M7 18a5 5 0 0 1-1-10 6 6 0 0 1 11-1 5.5 5.5 0 1 1 1 11H7Z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M9 11h7m-9 3h7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+ <symbol id="cup" viewBox="0 0 24 24"><path d="M4 8h13v8a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8Zm13 1h2a3 3 0 0 1 0 6h-2M8 5V2m5 3V2M2 22h18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+ <symbol id="leaf" viewBox="0 0 24 24"><path d="M5 18C-2 4 12 3 21 3c0 12-4 20-16 15Zm-3 4L16 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</defs></svg>
+<div class="shell">
+
+ <p class="notice" id="notice" role="status" aria-live="polite"></p>
+ <div class="court">
+  <div class="chamber">
+   <div class="court-tools" aria-label="Court controls"><fieldset id="case-navigation" hidden><p class="eyebrow" id="hearing-phase">1 · Make your case</p><button class="btn-text" id="change-case" aria-haspopup="dialog" aria-controls="picker">Change case</button></fieldset><div>
+    <button class="btn-icon" id="motion" aria-label="Animations" aria-pressed="true" title="Pause animations"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><g class="on"><path d="M9 6v12m6-12v12"/></g><path class="off" d="m9 5 10 7-10 7Z"/></g></svg></button>
+    <button class="btn-icon" id="sound" aria-label="Cat sounds" aria-pressed="false" title="Turn cat sounds on"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4Z"/><path class="on" d="M16 8q4 4 0 8m3-11q6 7 0 14"/><path class="off" d="m17 9 5 6m0-6-5 6"/></g></svg></button>
+   </div></div>
+   <fieldset id="workspace" disabled aria-label="Procrastination Cat Court">
+   <main id="chamber">
+   <section class="welcome" id="welcome">
+    <div id="welcome-judge"><div id="court-cats"><div class="cat-cast">
+    <div class="cat-card"><div class="speech" data-cat="prosecutor" role="status" aria-label="Prosecutor Pounce"><p id="prosecution"></p></div><button type="button" class="pet-cat" id="pet-prosecutor" aria-label="Give Prosecutor Pounce a head scratch" title="Even prosecutors need scritches">
+    <span class="miau-bubble" aria-hidden="true"></span><svg class="prosecutor" id="prosecutor" data-pose="welcome" viewBox="0 0 200 188" role="img" aria-label="Prosecutor Pounce, a fluffy gray kitten holding an enormous evidence folder"><g class="awake-cat">
+     <ellipse class="cat-ground" cx="102" cy="173" rx="69" ry="8" fill="#e2d6bf"/>
+     <path class="cat-backdrop" d="M38 137V78a62 62 0 0 1 124 0v59" fill="#eee3e2"/><path class="cat-backdrop-line" d="M44 134V78a56 56 0 0 1 112 0v56" fill="none" stroke="#dececf"/>
+     <path class="pounce-tail" d="M136 143c33 9 38-8 29-19-6-8-12-2-8 4" fill="none" stroke="#8f8a9d" stroke-width="10" stroke-linecap="round"/>
+     <path d="M62 161v-32q0-24 38-24t38 24v32" fill="#766273"/><path d="m87 111 13 15 13-15-5 36H92Z" fill="#fff8ee"/>
+     <g class="pounce-head">
+      <path class="pounce-ears" d="M62 76q-13-38-3-35 17 4 28 23m26 0q14-22 27-24 10-2 1 37" fill="#918b9e"/><path d="m63 52 3 18 13-6m44 0 14-13-1 20" fill="#d9a4af"/>
+      <path d="M57 82q-1-24 32-27l-3-7 13 6 8-7 2 8c28 0 36 14 35 28 4 24-20 40-44 39S53 105 57 82Z" fill="#aaa3b4"/>
+      <path d="M100 65c-1 13-11 21-17 30-6 13 4 25 17 25s25-12 17-25c-7-9-16-17-17-30" fill="#fff4e5"/>
+      <path class="pounce-brows" d="m67 77 10-5m47 0 10 5" stroke="#776879" stroke-width="2" stroke-linecap="round"/>
+      <g class="pounce-eyes"><g fill="#443641"><ellipse cx="81" cy="86" rx="6.2" ry="7.5"/><ellipse cx="120" cy="86" rx="6.2" ry="7.5"/></g><g fill="#fff9f0"><circle cx="79" cy="83" r="2.3"/><circle cx="118" cy="83" r="2.3"/><circle cx="83" cy="89" r="1"/><circle cx="122" cy="89" r="1"/></g></g>
+      <path class="pounce-happy" d="M75 88q6-9 12 0m27 0q6-9 12 0" fill="none" stroke="#655363" stroke-width="2.3" stroke-linecap="round"/>
+      <g fill="#e7a7af" opacity=".65"><ellipse cx="70" cy="100" rx="8" ry="4"/><ellipse cx="132" cy="100" rx="8" ry="4"/></g>
+      <path d="M96 99q4-3 8 0l-4 4Z" fill="#b97d89"/><path class="smile" d="M100 103v3m-6-1q2 7 6 1 4 6 6-1" fill="none" stroke="#8e6d73" stroke-width="1.4" stroke-linecap="round"/>
+      <ellipse class="talking-mouth" cx="100" cy="108" rx="4" ry="5" fill="#80525c"/><path class="talking-mouth" d="M97 110q3-2 6 0" stroke="#e6a0a8" stroke-width="2"/>
+     <path d="m64 94-9-2m10 8-10 2m81-8 9-2m-10 8 10 2" stroke="#877b8b" stroke-width="1.1" stroke-linecap="round"/>
+     </g>
+     <path d="m100 122-10-5v11Zm0 0 10-5v11Z" fill="#a65f74"/><circle cx="100" cy="122" r="2.4" fill="#c37c8d"/>
+     <g class="case-folder">
+      <rect x="60" y="132" width="83" height="35" rx="4" fill="#ba9970"/>
+      <path d="M66 132v-12h37l7 6h27v34H66Z" fill="#fcf5e8" stroke="#ddcbb0"/>
+      <path d="M76 129h20m-20 5h44" stroke="#d8c6ae" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M57 139q0-4 4-4h80q4 0 3 5l-4 28H61Z" fill="#d3b38a" stroke="#be9b71" stroke-width="1.2"/>
+      <rect x="78" y="143" width="47" height="16" rx="2" fill="#fff0d8" transform="rotate(-4 102 151)"/>
+      <title id="folder-title">The selected case</title><text id="folder-case-number" x="101" y="153" text-anchor="middle" font-family="Georgia,serif" font-size="7" fill="#826448" transform="rotate(-4 102 151)">EXHIBIT A</text>
+      <ellipse cx="60" cy="143" rx="8" ry="6" fill="#b9b1c1"/><ellipse cx="141" cy="143" rx="8" ry="6" fill="#b9b1c1"/>
+      <path d="m55 141 1 3m4-4 1 3m76-2 1 3m4-4 1 3" stroke="#918295" stroke-linecap="round"/>
+     </g>
+     <ellipse cx="78" cy="169" rx="12" ry="5" fill="#b9b1c1"/><ellipse cx="124" cy="169" rx="12" ry="5" fill="#b9b1c1"/>
+     <path class="pounce-heart" d="M153 49c-15-9-10-17-4-15 2 0 4 2 4 2s2-2 4-2c6-2 11 6-4 15Z" fill="#b6798c"/>
+    </g><g class="sleeping-cat">
+ <ellipse class="cat-ground" cx="100" cy="166" rx="76" ry="9"/>
+ <path class="cat-backdrop" d="M29 153V91a71 71 0 0 1 142 0v62Z"/>
+ <ellipse cx="110" cy="140" rx="57" ry="28" fill="#aaa3b4"/>
+ <path d="M154 143q18 28-36 20-35-5-20-18 11-10 22 1" fill="none" stroke="#8f8a9d" stroke-width="13" stroke-linecap="round"/>
+ <path d="m45 124-3-25 21 15 18-9 6 24" fill="#aaa3b4" stroke="#8f8a9d"/>
+ <ellipse cx="65" cy="135" rx="29" ry="23" fill="#aaa3b4"/>
+ <path d="m80 146-11-5v10Zm0 0 10-5v10Z" fill="#a65f74"/>
+ <ellipse cx="62" cy="146" rx="16" ry="10" fill="#fff0dd"/>
+ <path d="M44 134q6 6 12 0" fill="none" stroke="#66504b" stroke-width="2" stroke-linecap="round"/><path class="nap-lid" d="M70 134q6 6 12 0" fill="none" stroke="#66504b" stroke-width="2" stroke-linecap="round"/><ellipse class="nap-open" cx="76" cy="134" rx="3" ry="2.5" fill="#66504b"/>
+ <path d="m59 141 7 0-4 4Z" fill="#b97d89"/><path d="M62 145q-1 5 4 4" fill="none" stroke="#94695b"/>
+ <ellipse cx="43" cy="143" rx="5" ry="3" fill="#e7a7af" opacity=".6"/>
+ <ellipse cx="67" cy="158" rx="13" ry="5" fill="#aaa3b4"/><path d="m62 156 1 4m4-4 1 4" stroke="#8f8a9d"/>
+ </g></svg><span class="sneeze-bubble" aria-hidden="true"><span>Objection!</span><span>Achoo!</span></span></button><span class="cat-name">Prosecutor Pounce</span><span class="cat-job">Very prepared. Very pettable.</span></div>
+    <div class="cat-card judge-card"><div class="speech" data-cat="judge" role="status" aria-label="Justice Later"><p id="observation"></p><p id="shrink-guidance" hidden>“Just one paw-sized step. Something you could begin in five minutes.”</p></div><button type="button" class="pet-cat" id="pet-judge" aria-label="Give Justice Later a head scratch" title="Head scritches are welcome">
+    <span class="miau-bubble" aria-hidden="true"></span><svg class="judge" id="judge" data-pose="welcome" viewBox="0 0 200 188" role="img" aria-label="Justice Later, a round ginger kitten in a powdered wig"><g class="awake-cat">
+     <defs><linearGradient id="ginger-fur" x2="0" y2="1"><stop stop-color="#f4cb91"/><stop offset="1" stop-color="#dfa66c"/></linearGradient></defs>
+     <ellipse class="cat-ground" cx="100" cy="173" rx="89" ry="9" fill="#e2d6bf"/>
+     <path class="cat-backdrop" d="M25 135V58a75 75 0 0 1 150 0v77" fill="#ece2d0"/>
+     <path class="cat-backdrop-line" d="M33 128V58a67 67 0 0 1 134 0v70" fill="none" stroke="#d6c7aa"/>
+     <path class="tail" d="M131 137c30 0 38-14 34-31-2-8-10-10-12-4" fill="none" stroke="#c88e59" stroke-width="9" stroke-linecap="round"/>
+     <g class="cat-body"><path d="M65 144c-3-33 7-48 35-48s38 15 35 48" fill="#625268"/>
+     <path d="m88 105 12 8 12-8-4 31H92Z" fill="#fffbf0"/>
+     </g><g class="head">
+     <g class="ear-left"><path d="M60 80Q49 42 57 43q12 0 29 22" fill="#e9b67f" stroke="#c68f60" stroke-width="1.2"/><path d="M62 68 59 51q11 3 16 14" fill="#e7a5a1"/></g>
+     <path d="M114 65q17-22 29-22 8-1-3 37" fill="#e9b67f" stroke="#c68f60" stroke-width="1.2"/><path d="m125 65 16-14-3 17" fill="#e7a5a1"/>
+     <path d="M57 83C57 62 76 55 100 57c24-2 43 5 43 26 3 24-19 40-43 40S54 107 57 83Z" fill="url(#ginger-fur)"/>
+     <path d="m91 64 2 7m7-9v8m9-6-2 7" stroke="#c58e5d" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+     <path d="M78 61c-14-13-5-27 8-25 4-12 22-12 27-1 14-3 24 13 10 27" fill="#fffcf4" stroke="#dfd3bd" stroke-width="1.3"/>
+     <path d="M85 40q-5 8 3 11m14-16q-6 9 2 13m12-8q-3 7 4 10" fill="none" stroke="#e9dfce" stroke-width="1.2" stroke-linecap="round"/>
+     <g fill="#fffcf4" stroke="#dfd3bd" stroke-width="1.3"><circle cx="56" cy="79" r="8"/><circle cx="54" cy="92" r="8"/><circle cx="58" cy="105" r="8"/><circle cx="144" cy="79" r="8"/><circle cx="146" cy="92" r="8"/><circle cx="142" cy="105" r="8"/></g>
+     <ellipse cx="100" cy="106" rx="20" ry="13" fill="#ffecd0"/>
+     <path d="M77 76q5-3 10-1m26 0q5-2 10 1" fill="none" stroke="#a57550" stroke-width="1.6" stroke-linecap="round"/>
+     <g class="blink"><g fill="#423435"><ellipse cx="83" cy="88" rx="6" ry="7.2"/><ellipse cx="117" cy="88" rx="6" ry="7.2"/></g><g fill="#fffaf3"><circle cx="81" cy="85" r="2.2"/><circle cx="115" cy="85" r="2.2"/><circle cx="85" cy="91" r=".9"/><circle cx="119" cy="91" r=".9"/></g></g>
+     <path class="happy-eyes" d="M77 89q6-9 12 0m22 0q6-9 12 0" fill="none" stroke="#66504b" stroke-width="2.3" stroke-linecap="round"/>
+     <g fill="none" stroke="#b9925e" stroke-width="1.4"><circle cx="83" cy="88" r="12"/><circle cx="117" cy="88" r="12"/><path d="M95 87q5-3 10 0m-34-1-6-2m64 2 6-2"/></g>
+     <ellipse cx="70" cy="102" rx="7.5" ry="4" fill="#df9294" opacity=".55"/><ellipse cx="130" cy="102" rx="7.5" ry="4" fill="#df9294" opacity=".55"/>
+     <path d="M96 100q4-3 8 0l-4 4Z" fill="#bd7b79"/><path class="smile" d="M100 104v3m-6-1q2 7 6 1 4 6 6-1" fill="none" stroke="#94695b" stroke-width="1.4" stroke-linecap="round"/>
+     <path d="m65 96-10-2m10 7-11 1m81-8 10-2m-10 9 11 1" stroke="#b28665" stroke-width="1" stroke-linecap="round"/>
+     <ellipse class="talking-mouth" cx="100" cy="108" rx="4" ry="5" fill="#80525c"/><path class="talking-mouth" d="M97 110q3-2 6 0" stroke="#e6a0a8" stroke-width="2"/>
+     <ellipse class="yawn" cx="100" cy="108" rx="4.5" ry="5.5" fill="#94695b"/>
+     </g>
+     <rect x="20" y="138" width="160" height="32" rx="3" fill="#98745e"/><rect x="15" y="134" width="170" height="8" rx="3" fill="#b88f6a"/>
+     <path d="M27 148h146v16H27Z" fill="none" stroke="#b58e70"/>
+     <rect x="67" y="147" width="66" height="17" rx="2" fill="#d3b27a"/>
+     <text x="100" y="158.5" text-anchor="middle" font-family="Georgia,serif" font-size="7" fill="#513d30">JUSTICE LATER</text>
+     <g class="gavel-arm"><g transform="rotate(-22 155 123)" fill="#744b3d" stroke="#51372e" stroke-width="1.5"><rect x="141" y="120" width="25" height="5" rx="2"/><rect x="139" y="112" width="9" height="20" rx="2"/></g><ellipse cx="166" cy="129" rx="7" ry="5" fill="#c88e59"/></g>
+     <g class="paw"><ellipse cx="62" cy="131" rx="11" ry="8" fill="#f0c48c"/><ellipse cx="62" cy="133" rx="4" ry="2.8" fill="#dc9b9a"/><g fill="#dc9b9a"><circle cx="56" cy="128" r="1.6"/><circle cx="62" cy="126.5" r="1.7"/><circle cx="68" cy="128" r="1.6"/></g></g>
+     <path class="heart" d="M155 54c-17-10-11-19-5-17 3 0 5 3 5 3s2-3 5-3c6-2 12 7-5 17Z" fill="#a85f68"/>
+     <g class="thought" fill="#b89b70"><circle cx="149" cy="61" r="2"/><circle cx="157" cy="51" r="3"/><circle cx="168" cy="40" r="4"/></g>
+    </g><g class="sleeping-cat">
+ <ellipse class="cat-ground" cx="100" cy="166" rx="76" ry="9"/>
+ <path class="cat-backdrop" d="M29 153V91a71 71 0 0 1 142 0v62Z"/>
+ <ellipse cx="110" cy="140" rx="57" ry="28" fill="#f4cb91"/>
+ <path d="M154 143q18 28-36 20-35-5-20-18 11-10 22 1" fill="none" stroke="#c88e59" stroke-width="13" stroke-linecap="round"/>
+ <path d="m45 124-3-25 21 15 18-9 6 24" fill="#f4cb91" stroke="#c88e59"/>
+ <ellipse cx="65" cy="135" rx="29" ry="23" fill="#f4cb91"/>
+ <path d="M53 118q-9-14 5-18 5-12 15-5 13-4 17 10l-5 10" fill="#fffcf4" stroke="#dfd3bd"/>
+ <ellipse cx="62" cy="146" rx="16" ry="10" fill="#fff0dd"/>
+ <path d="M44 134q6 6 12 0" fill="none" stroke="#66504b" stroke-width="2" stroke-linecap="round"/><path class="nap-lid" d="M70 134q6 6 12 0" fill="none" stroke="#66504b" stroke-width="2" stroke-linecap="round"/><ellipse class="nap-open" cx="76" cy="134" rx="3" ry="2.5" fill="#66504b"/>
+ <path d="m59 141 7 0-4 4Z" fill="#b97d89"/><path d="M62 145q-1 5 4 4" fill="none" stroke="#94695b"/>
+ <ellipse cx="43" cy="143" rx="5" ry="3" fill="#df9294" opacity=".6"/>
+ <ellipse cx="67" cy="158" rx="13" ry="5" fill="#f4cb91"/><path d="m62 156 1 4m4-4 1 4" stroke="#c88e59"/>
+ </g></svg></button><span class="cat-name">Justice Later</span><span class="cat-job">A soft spot for small beginnings</span></div>
+    </div><p class="cat-caption" id="cat-caption" aria-live="polite">Both accept head scritches. Just saying.</p></div></div>
+    <p class="eyebrow">Small paws. A fair hearing.</p>
+    <h2 id="welcome-title">All rise.<br>Then take one small step.</h2>
+    <p class="hint" id="return-greeting" hidden>Welcome back. We saved you a cushion.</p>
+    <p class="lede" id="welcome-copy">Bring the task you’ve been avoiding. Make your case. Leave with a little less weight on your shoulders.</p>
+    <button class="primary btn-primary" id="call-case" aria-haspopup="dialog" aria-controls="picker">Choose a case <span aria-hidden="true">→</span></button>
+    <p class="welcome-note">No shame. No life sentences.</p>
+   </section>
+   <section id="hearing" hidden>
+    <div class="scene-stage" id="hearing-stage">
+    <section id="case-brief" class="case-brief" aria-labelledby="case-title">
+     <p class="eyebrow" id="case-number"></p>
+     <h1 class="file-title" id="case-title" tabindex="-1"></h1>
+     <p class="evidence" id="evidence"></p>
+    </section>
+    <div class="judge-note" id="judge-note"><div id="hearing-judge"></div></div>
+
+    <div class="outcome" id="outcome" hidden role="region" aria-labelledby="outcome-title">
+     <div id="outcome-judge"></div>
+     <div class="stamp"><svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="16" rx="7" ry="5"/><ellipse cx="4" cy="10" rx="2.5" ry="3"/><ellipse cx="9" cy="5" rx="2.5" ry="3"/><ellipse cx="15" cy="5" rx="2.5" ry="3"/><ellipse cx="20" cy="10" rx="2.5" ry="3"/></svg><span id="stamp"></span></div><h3 id="outcome-title" tabindex="-1"></h3><p class="outcome-copy" id="outcome-copy"></p><p class="step-title" id="step-title" hidden></p><button class="primary btn-primary" id="start-step" hidden>Start this small step →</button>
+     <button class="text-button btn-text" id="another" aria-haspopup="dialog" aria-controls="picker">Call another case →</button>
+    </div>
+    </div>
+    <fieldset id="case-controls" aria-label="Case actions">
+    <div id="pleading">
+     <h3 class="section-heading">What’s holding you back?</h3><p class="hint">Choose your defense. The cats will suggest a kind next step.</p>
+     <div class="pleas" id="pleas" role="group" aria-label="Your defense">
+      <button class="plea" data-plea="big" aria-pressed="false"><svg aria-hidden="true"><use href="#mountain"/></svg><span><strong>It’s too big</strong><small>I don’t know where to begin.</small></span></button>
+      <button class="plea" data-plea="unclear" aria-pressed="false"><svg aria-hidden="true"><use href="#cloud"/></svg><span><strong>It’s a bit of a fog</strong><small>The next step isn’t clear.</small></span></button>
+      <button class="plea" data-plea="boring" aria-pressed="false"><svg aria-hidden="true"><use href="#cup"/></svg><span><strong>I just don’t feel like it</strong><small>My enthusiasm is elsewhere.</small></span></button>
+      <button class="plea" data-plea="irrelevant" aria-pressed="false"><svg aria-hidden="true"><use href="#leaf"/></svg><span><strong>It may not matter now</strong><small>Perhaps things have changed.</small></span></button>
+     </div>
+     <button class="primary btn-primary" id="hear-verdict" disabled>Hear the verdict <span aria-hidden="true">→</span></button>
+    </div>
+    <div id="ruling" hidden>
+     <h3 class="section-heading" id="ruling-title" tabindex="-1">Choose your next move.</h3><div class="defense-scene"><svg viewBox="0 0 64 64" aria-hidden="true">
+ <g data-defense-art="big"><use href="#mountain" x="6" y="8" width="52" height="52"/><path class="scene-detail foothold" d="M7 56h9m3-7h8m3-7h7"/></g>
+ <g data-defense-art="unclear" hidden><circle cx="29" cy="25" r="11" fill="currentColor" opacity=".25"/><path class="scene-detail" d="M29 7v4m-18 14h4m28 0h4M16 12l3 3m20-3-3 3"/><use class="fog" href="#cloud" x="7" y="20" width="49" height="40"/></g>
+ <g data-defense-art="boring" hidden><path class="scene-detail" d="M15 28h30v16q0 10-15 10T15 44Zm30 3h5q12 8-5 13M10 57h40"/><path class="scene-detail steam" d="M24 23q-6-4 0-8t0-8m12 16q-6-4 0-8t0-8"/></g>
+ <g data-defense-art="irrelevant" hidden><use class="loose-leaf" href="#leaf" x="12" y="7" width="40" height="44"/><path class="scene-detail" d="M12 56q20 5 40 0"/></g>
+ </svg><div><strong id="ruling-kindness"></strong><p class="hint" id="ruling-copy"></p></div></div>
+     <div class="verdicts" id="verdicts">
+      <button class="verdict" data-verdict="start"><span class="numeral" aria-hidden="true">I.</span><span><span class="recommendation" hidden>Recommended</span><strong>Make a beginning</strong><small id="start-description">Start this task’s timer. Five minutes is a fine beginning.</small></span><span aria-hidden="true">→</span></button>
+      <button class="verdict" data-verdict="shrink"><span class="numeral" aria-hidden="true">II.</span><span><span class="recommendation" hidden>Recommended</span><strong>Reduce the sentence</strong><small>Add one tiny subtask. Keep the original task intact.</small></span><span aria-hidden="true">→</span></button>
+      <button class="verdict" data-verdict="dismiss"><span class="numeral" aria-hidden="true">III.</span><span><span class="recommendation" hidden>Recommended</span><strong>Dismiss the case</strong><small>Set it aside in this court. Your task stays in your list.</small></span><span aria-hidden="true">→</span></button>
+     </div>
+
+     <p class="hint">You have the final say. Starting a timer switches away from any running task; it won’t stop automatically after five minutes.</p>
+     <div class="action-row"><button class="text-button btn-text" id="back">← Amend my defense</button></div>
+    </div>
+     <form class="shrink-form" id="shrink-form" hidden>
+      <h3 class="section-heading" id="shrink-title" tabindex="-1">Make it paw-sized.</h3><p class="hint">One concrete action is enough.</p><label for="small-step">Your first small step</label><input id="small-step" maxlength="200" required placeholder="e.g. Find the tax folder and open it" autocomplete="off">
+      <p class="hint">Adds a subtask with a 5-minute estimate. Your existing task, notes, and steps are kept. You can start its timer afterward.</p>
+      <div class="action-row"><button type="submit" class="primary btn-primary">Add this small step</button><button type="button" class="text-button btn-text" id="cancel-shrink">← Back to rulings</button></div>
+     </form>
+    </fieldset>
+
+   </section>
+  </main>
+  <dialog class="picker" id="picker" aria-labelledby="picker-title" aria-describedby="picker-hint"><section class="docket">
+   <div class="docket-top"><h2 id="picker-title">Choose a case</h2><button class="picker-close btn-icon" id="close-picker" type="button" aria-label="Close task picker">×</button></div>
+   <p class="docket-intro" id="picker-hint">The task is on trial. Your worth is not.</p>
+   <label class="search-label" for="search">Find a task</label><input class="search" id="search" type="search" placeholder="Search unfinished business…" autocomplete="off">
+   <div class="filters" aria-label="Case status"><button class="btn-text" id="open-filter" aria-pressed="true">Open · 0</button><button class="btn-text" id="dismissed-filter" aria-pressed="false">Dismissed · 0</button></div>
+   <p class="notice" id="picker-status" role="status"></p>
+   <ul class="case-list" id="cases"></ul><p class="docket-empty" id="empty" hidden></p>
+  </section></dialog>
+ </fieldset>
+ </div></div>
+ <p class="demo" id="demo" hidden>Demo court · Changes reset on reload.</p>
+</div>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+document.documentElement.classList.toggle('standalone', window.parent === window);
+const demo = !window.PluginAPI && window.parent === window;
+const demoTasks = [
+ { id:'tax', title:'Finally sort out my tax return', timeEstimate:7200000, subTaskIds:[], isDone:false },
+ { id:'website', title:'Give my personal website some love', timeEstimate:5400000, subTaskIds:[], isDone:false },
+ { id:'dentist', title:'Make that dentist appointment', timeEstimate:600000, subTaskIds:[], isDone:false },
+ { id:'inbox', title:'Reply to the email I keep reopening', timeEstimate:900000, subTaskIds:[], isDone:false },
+ { id:'hobby', title:'Learn to make sourdough', timeEstimate:0, subTaskIds:[], isDone:false }
+];
+// Demo data lives only in this page. It never uses a real host or persists task edits.
+let demoSaved = null;
+const api = window.PluginAPI || (demo ? {
+ getTasks: async () => structuredClone(demoTasks),
+ loadSyncedData: async () => demoSaved,
+ persistDataSynced: async value => { demoSaved = value; },
+ dispatchAction: async () => {},
+ addTask: async data => {
+  const id = 'step-' + crypto.randomUUID();
+  demoTasks.push({ ...data, id, isDone:false, subTaskIds:[] });
+  demoTasks.find(task => task.id === data.parentId).subTaskIds.push(id);
+  return id;
+ }
+} : null);
+let tasks = [], dismissed = [], selectedId = null, plea = null, filter = 'open', busy = false, ready = false, createdStepId = null, stepStarted = false;
+let syncTimer, syncing = false, syncPending = false, dataEpoch = 0, syncError = '';
+let soundEnabled = false, audioContext, soundOutput, catVoice;
+let motionPaused = false, gavelTimer, focusTimer, sneezeTimer, sneezeStop;
+let defenseChanges = 0, hasOpened = false, returning = false;
+const petTimers = new Map(), voiceTimers = [], debateTimers = [];
+const reducedMotion = matchMedia('(prefers-reduced-motion:reduce)');
+function updateMotion() {
+ const still = motionPaused || reducedMotion.matches;
+ document.documentElement.classList.toggle('still', still);
+ if (still) clearSneeze();
+ $('motion').setAttribute('aria-pressed', String(!still));
+ $('motion').disabled = reducedMotion.matches;
+ $('motion').title = reducedMotion.matches ? 'Animations disabled by your reduced-motion preference' : still ? 'Enable animations' : 'Pause animations';
+}
+function poseCourt(pose, slot) {
+ stopDebate();
+ clearTimeout(gavelTimer); clearTimeout(focusTimer); clearSneeze();
+ catVoice?.(); clearVoice();
+ for (const timer of petTimers.values()) clearTimeout(timer);
+ petTimers.clear();
+ document.querySelectorAll('.pet-heart').forEach(heart => heart.remove());
+ if (slot) $(slot).append($('court-cats'));
+ // Restart a short reaction even when the same defense is chosen again.
+ for (const id of ['judge','prosecutor']) {
+  delete $('pet-' + id).dataset.resting;
+  const cat = $(id); cat.dataset.pose = '';
+  void cat.getBoundingClientRect(); cat.dataset.pose = pose;
+ }
+ const caption = pose === 'sleep' ? 'The prosecution rests. So does the judge.' : pose === 'verdict' ? 'A small victory. Two very proud cats.' : pose === 'welcome' ? 'Both accept head scritches. Just saying.' : 'Small paws. Undivided attention.';
+ if ($('cat-caption').textContent !== caption) $('cat-caption').textContent = caption;
+ if (pose === 'verdict') {
+  speakCat('prosecutor', false, .58);
+  // The gavel makes contact 45% into its 900ms swing. Actions never wait for it.
+  if (document.documentElement.classList.contains('still')) gavel();
+  else gavelTimer = setTimeout(() => { if (!document.hidden) gavel(); }, 405);
+ }
+}
+const defenses = {
+ big: { quote:'“The court finds this mountain guilty of impersonating a single task.”', recommendation:'shrink', ruling:'A smaller sentence is in order. Give this task a first step you can actually see.' },
+ unclear: { quote:'“You cannot be expected to follow instructions written in fog.”', recommendation:'shrink', ruling:'Make the next action concrete. Opening a document or writing one question counts.' },
+ boring: { quote:'“Enthusiasm is excused from today’s proceedings. A small beginning will suffice.”', recommendation:'start', ruling:'Try a beginning, with permission to stop. You don’t have to finish to make progress.' },
+ irrelevant: { quote:'“A past version of you made this plan. The court allows new evidence.”', recommendation:'dismiss', ruling:'You may let this case rest. Dismissal only changes this court’s docket, and you can reopen it.' }
+};
+const prosecutionLines = {
+ big:'“Your Honor, this appears to be several tasks in a trench coat.”',
+ unclear:'“I cannot locate the first step. I even checked under the desk.”',
+ boring:'“I brought a strongly worded… excuse me. Was that a sunbeam?”',
+ irrelevant:'“New evidence, Your Honor: perhaps this task has served its purpose.”'
+};
+function notify(message) {
+ $('notice').textContent = $('picker').open ? '' : message;
+ $('picker-status').textContent = $('picker').open ? message : '';
+}
+function taskById(id) { return tasks.find(task => task.id === id); }
+function eligible(task) { return task && !task.isDone && !task.parentId; }
+function topLevelTasks() { return tasks.filter(eligible); }
+function estimate(ms) { return ms > 0 ? `${Math.round(ms / 60000)} min estimated` : 'No estimate needed to begin'; }
+function readSaved(raw) {
+ if (raw === null) return [];
+ let value;
+ try { value = JSON.parse(raw); } catch { value = null; }
+ if (value?.version !== 1 || !Array.isArray(value.dismissed) || !value.dismissed.every(id => typeof id === 'string')) throw Error('The court’s saved docket could not be read. It has not been overwritten.');
+ return [...new Set(value.dismissed)];
+}
+async function getTasks() {
+ const value = await api.getTasks();
+ if (!Array.isArray(value)) throw Error('The task list could not be read. Please try again.');
+ return value;
+}
+function renderDocket() {
+ const focusedId = $('cases').contains(document.activeElement) ? document.activeElement.dataset.taskId : null;
+ const scrollTop = $('cases').scrollTop;
+ const all = topLevelTasks();
+ $('open-filter').textContent = `Open · ${all.filter(task => !dismissed.includes(task.id)).length}`;
+ $('dismissed-filter').textContent = `Dismissed · ${all.filter(task => dismissed.includes(task.id)).length}`;
+ $('open-filter').setAttribute('aria-pressed', String(filter === 'open'));
+ $('dismissed-filter').setAttribute('aria-pressed', String(filter === 'dismissed'));
+ const query = $('search').value.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+ const visible = all.filter(task => dismissed.includes(task.id) === (filter === 'dismissed') && query.every(word => task.title.toLocaleLowerCase().includes(word)));
+ $('cases').replaceChildren();
+ for (const task of visible) {
+  const li = document.createElement('li'), button = document.createElement('button');
+  button.className = 'case-item btn-text'; button.dataset.taskId = task.id;
+  button.title = task.title;
+  button.setAttribute('aria-pressed', String(task.id === selectedId));
+  const number = document.createElement('small'), title = document.createElement('strong'), meta = document.createElement('span');
+  number.textContent = `Case ${String(all.indexOf(task) + 1).padStart(3, '0')} · ${filter === 'dismissed' ? 'Dismissed' : 'Awaiting a hearing'}`;
+  title.textContent = task.title;
+  meta.className = 'case-meta'; meta.textContent = filter === 'dismissed' ? 'Reopen this case ↗' : estimate(task.timeEstimate);
+  button.append(number, title, meta); li.append(button); $('cases').append(li);
+  button.addEventListener('click', () => filter === 'dismissed' ? reopen(task.id) : selectCase(task.id));
+ }
+ $('cases').scrollTop = scrollTop;
+ if (focusedId) ([...$('cases').querySelectorAll('button')].find(button => button.dataset.taskId === focusedId) || $('search')).focus({ preventScroll:true });
+ $('empty').hidden = visible.length > 0;
+ $('empty').textContent = query.length ? 'No matching cases. Try a different search.' : filter === 'dismissed' ? 'No dismissed cases. The filing cabinet is enjoying the peace.' : all.length ? 'The docket is clear. Dismissed cases can be reopened any time.' : 'No unfinished main tasks. A peaceful day in court. Add a task in Super Productivity to bring a case.';
+}
+function focusHeading(id, scrollId = id) { $(id).focus({ preventScroll:true }); if (matchMedia('(max-width:650px)').matches) $(scrollId).scrollIntoView({ block:'start' }); }
+function updateEvidence(task) {
+ $('case-title').textContent = task.title;
+ const children = (task.subTaskIds || []).map(taskById).filter(child => child && !child.isDone);
+ $('evidence').textContent = `${estimate(task.timeEstimate)} · ${children.length ? `${children.length} unfinished step${children.length === 1 ? '' : 's'} · ` : ''}One task. A kinder next step.`;
+ const next = nextTask(task);
+ $('start-description').textContent = next && next.id !== task.id ? `Start the next unfinished step: ${next.title}` : next ? 'Start this task’s timer. Five minutes is a fine beginning.' : 'All existing steps are done. Add a new step or dismiss the case.';
+ document.querySelector('[data-verdict="start"]').disabled = !next;
+}
+function showHearingStage(stage) {
+ $('hearing').dataset.stage = stage;
+ for (const [id, phase] of [['pleading','defense'], ['ruling','ruling'], ['shrink-form','shrink'], ['outcome','outcome']]) $(id).hidden = stage !== phase;
+ $('judge-note').hidden = stage === 'outcome';
+ $('observation').hidden = stage === 'shrink';
+ $('hearing-stage').classList.remove('opening');
+ $('shrink-guidance').hidden = stage !== 'shrink';
+ $('hearing-phase').textContent = { defense:'1 · Make your case', ruling:'2 · Choose your ruling', shrink:'2 · One small step', outcome:'3 · Court adjourned' }[stage];
+}
+function selectCase(id) {
+ if (busy || !ready || !eligible(taskById(id))) return;
+ $('picker').close();
+ $('hearing').classList.remove('cozy');
+ selectedId = id; plea = null; createdStepId = null; stepStarted = false;
+ $('case-controls').disabled = false;
+ $('case-number').textContent = `Case ${String(topLevelTasks().findIndex(task => task.id === id) + 1).padStart(3, '0')}`;
+ $('welcome').hidden = true; $('hearing').hidden = false; $('case-navigation').hidden = false;
+ showHearingStage('defense');
+ $('hear-verdict').disabled = true;
+ document.querySelectorAll('[data-plea]').forEach(button => button.setAttribute('aria-pressed','false'));
+ $('observation').textContent = '“The court accepts ‘I’m stuck’ as a valid opening statement.”';
+ $('prosecution').textContent = '“Your Honor, I submit Exhibit A: one rather intimidating task.”';
+ $('judge-note').hidden = false;
+ $('folder-case-number').textContent = 'CASE ' + String(topLevelTasks().findIndex(task => task.id === id) + 1).padStart(3, '0');
+ $('folder-title').textContent = taskById(id).title;
+ $('small-step').value = ''; notify(''); updateEvidence(taskById(id)); renderDocket();
+ openCourt();
+}
+function openCourt() {
+ const stage = $('hearing-stage');
+ stage.classList.remove('opening'); void stage.offsetWidth; stage.classList.add('opening');
+ poseCourt('arrival', 'hearing-judge'); $('judge').dataset.pose = 'welcome';
+ debate('opening', 1.5);
+ focusHeading('case-title');
+ document.querySelector('.court-tools').scrollIntoView({ block:'start' });
+}
+function nextTask(task) {
+ if (!(task.subTaskIds || []).length) return task;
+ return task.subTaskIds.map(taskById).find(child => child && child.parentId === task.id && !child.isDone);
+}
+async function freshCase() {
+ tasks = await getTasks(); renderDocket();
+ const task = taskById(selectedId);
+ if (!eligible(task)) throw Error('This task was completed, removed, or moved under another task. Choose another case from the docket.');
+ updateEvidence(task); return task;
+}
+async function run(action) {
+ if (busy || !ready) return;
+ dataEpoch++;
+ const focused = document.activeElement;
+ busy = true; $('workspace').disabled = true; $('case-navigation').disabled = true; $('workspace').setAttribute('aria-busy','true'); notify('');
+ try { await action(); } catch (error) { notify(error.message || 'The court hit a snag. Please try again.'); }
+ finally { busy = false; $('workspace').disabled = false; $('case-navigation').disabled = false; $('workspace').removeAttribute('aria-busy');
+  // Disabling the fieldset blurs the clicked button; give keyboard users their place back after an error.
+  if ([document.body, $('picker')].includes(document.activeElement) && focused?.isConnected) focused.focus();
+  scheduleSync();
+ }
+}
+async function initialize() {
+ if (busy) return;
+ dataEpoch++; stopDebate();
+ busy = true; ready = false; $('workspace').disabled = true; $('case-navigation').disabled = true; notify('Opening the court’s docket…');
+ try {
+  if (!api) throw Error('The Super Productivity connection is unavailable. Reopen the plugin from the app.');
+  const [newTasks, saved] = await Promise.all([getTasks(), api.loadSyncedData()]);
+  const newDismissed = readSaved(saved);
+  tasks = newTasks; dismissed = newDismissed; selectedId = null; ready = true; syncError = '';
+  if (!hasOpened) {
+   try { returning = sessionStorage.getItem('ridonculous-cat-court-visited') === 'true'; sessionStorage.setItem('ridonculous-cat-court-visited', 'true'); } catch { /* A greeting never depends on storage access. */ }
+   hasOpened = true;
+  }
+  $('hearing').classList.remove('cozy');
+  $('case-navigation').hidden = true; $('welcome').hidden = false; $('hearing').hidden = true; renderDocket(); showWelcome(); notify('');
+ } catch (error) { syncError = (error.message || 'The court could not open.') + ' The court will retry automatically.'; notify(syncError); scheduleSync(3000); }
+ finally { busy = false; $('workspace').disabled = !ready; $('case-navigation').disabled = !ready; if (syncPending) scheduleSync(); }
+}
+function showWelcome() {
+ $('return-greeting').hidden = !returning;
+ const empty = !topLevelTasks().some(task => !dismissed.includes(task.id));
+ $('welcome-title').textContent = empty ? 'Nothing before the court.' : 'All rise. Then take one small step.';
+ $('welcome-copy').textContent = empty ? 'A perfectly respectable situation. The cats are taking a well-earned nap.' : 'Bring the task you’ve been avoiding. Make your case. Leave with a little less weight on your shoulders.';
+ $('call-case').textContent = empty ? 'Browse the docket →' : 'Choose a case →';
+ poseCourt(empty ? 'sleep' : 'welcome', 'welcome-judge');
+}
+function settleForFocus() {
+ clearTimeout(focusTimer);
+ const settle = () => {
+  $('hearing').classList.add('cozy');
+  $('hearing-phase').textContent = '3 · A quiet beginning';
+  $('outcome-title').textContent = 'Court is quietly rooting for you.';
+  poseCourt('sleep', 'outcome-judge');
+ };
+ if (document.documentElement.classList.contains('still')) settle();
+ else focusTimer = setTimeout(settle, 1800);
+}
+function result(stamp, title, copy, stepTitle = '') {
+ showHearingStage('outcome');
+ $('stamp').textContent = stamp; $('outcome-title').textContent = title; $('outcome-copy').textContent = copy;
+ $('step-title').textContent = stepTitle; $('step-title').hidden = !stepTitle;
+ $('start-step').hidden = !createdStepId; $('start-step').disabled = false; $('start-step').textContent = 'Start this small step →';
+ $('outcome').classList.remove('arrive'); void $('outcome').offsetWidth; $('outcome').classList.add('arrive');
+ $('judge-note').hidden = true; poseCourt('verdict', 'outcome-judge'); focusHeading('outcome-title', 'outcome');
+}
+async function startCase() {
+ await run(async () => {
+  const task = await freshCase(), next = nextTask(task);
+  if (!next) throw Error('Every existing step is already done. Add a new small step or dismiss this case.');
+  try { await api.dispatchAction({ type:'[Task] SetCurrentTask', id:next.id }); }
+  catch { throw Error('The timer start could not be confirmed. Check the app’s timer before trying again.'); }
+  result('Beginning granted', 'A beginning is on the record.', demo ? 'Demo ruling: this would start the task’s timer in Super Productivity. Five minutes is enough to begin; stopping remains up to you.' : 'The timer has been started. Give yourself permission to try for five minutes. Stop it in Super Productivity whenever you’re ready.', next.title);
+  settleForFocus();
+ });
+}
+async function saveDismissed(next) {
+ try { await api.persistDataSynced(JSON.stringify({ version:1, dismissed:next })); }
+ catch { throw Error('The court couldn’t save this docket change. Your task has not been changed. Check the docket before retrying.'); }
+ dismissed = next; renderDocket();
+}
+async function dismissCase() {
+ await run(async () => {
+  await freshCase();
+  // Re-read before saving to preserve other devices' already-synced dismissals.
+  const latest = readSaved(await api.loadSyncedData());
+  await saveDismissed([...new Set([...latest, selectedId])]);
+  result('Case dismissed', 'You may put this down.', 'This case is resting in the Dismissed docket. Your task is still in Super Productivity, exactly as it was. You can reopen the case any time.');
+ });
+}
+async function reopen(id) {
+ let reopened = false;
+ await run(async () => {
+  const latest = readSaved(await api.loadSyncedData());
+  await saveDismissed(latest.filter(value => value !== id)); reopened = true;
+ });
+ if (reopened) { filter = 'open'; selectCase(id); }
+}
+function clearSneeze() {
+ clearTimeout(sneezeTimer); sneezeStop?.(); sneezeStop = null;
+ if ($('prosecutor').dataset.pose === 'sneeze') {
+  $('prosecutor').dataset.pose = plea || 'listen';
+  $('cat-caption').textContent = 'Small paws. Undivided attention.';
+ }
+}
+function sneeze() {
+ $('prosecutor').dataset.pose = 'sneeze';
+ $('cat-caption').textContent = '“Objection! … Achoo!” The prosecution requests a tissue.';
+ sneezeTimer = setTimeout(() => {
+  $('prosecutor').dataset.pose = plea || 'listen';
+  $('cat-caption').textContent = 'Small paws. Undivided attention.';
+ }, 1350);
+ if (!soundEnabled || audioContext?.state !== 'running') return;
+ try {
+  const ctx = audioContext, start = ctx.currentTime + .55;
+  const buffer = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * .14), ctx.sampleRate);
+  const samples = buffer.getChannelData(0);
+  for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
+  const source = ctx.createBufferSource(), filter = ctx.createBiquadFilter(), gain = ctx.createGain();
+  source.buffer = buffer; filter.type = 'bandpass'; filter.frequency.value = 1800; filter.Q.value = .7;
+  gain.gain.setValueAtTime(0, start); gain.gain.linearRampToValueAtTime(.035, start + .015); gain.gain.exponentialRampToValueAtTime(.001, start + .14);
+  source.connect(filter); filter.connect(gain); gain.connect(soundOutput);
+  const cleanup = () => { source.disconnect(); filter.disconnect(); gain.disconnect(); if (sneezeStop === stop) sneezeStop = null; };
+  const stop = () => { try { source.stop(); } catch { /* Already ended. */ } cleanup(); };
+  sneezeStop = stop; source.onended = cleanup; source.start(start);
+ } catch { /* The visual sneeze works without audio. */ }
+}
+// Short, interruptible exchanges. Existing written dialogue stays available throughout.
+function stopDebate() {
+ const active = debateTimers.length > 0;
+ debateTimers.splice(0).forEach(clearTimeout);
+ for (const id of ['judge','prosecutor']) delete $(id).dataset.chat;
+ document.querySelectorAll('.speech').forEach(speech => speech.classList.remove('is-speaking'));
+ if (active) { catVoice?.(); clearVoice(); $('cat-caption').textContent = 'Small paws. Undivided attention.'; }
+}
+function debate(stage, delay = 0) {
+ stopDebate();
+ if (document.hidden) return;
+ const turns = stage === 'opening'
+  ? [['prosecutor','Miau!',1.04], ['judge','Mrr-miau?',.96]]
+  : stage === 'ruling'
+  ? [['prosecutor','Miau?',1.08], ['judge','Miau.',.94], ['prosecutor','Mrrp?',1.02], ['judge','Miau!',1]]
+  : [['prosecutor','Miau!',1.08], ['judge','Miau?',.98], ['prosecutor','Miaaau!',1.12], ['judge','Mrr. Miau.',.94]];
+ const turn = ([id, line, tone]) => {
+  if (document.hidden) { stopDebate(); return; }
+  for (const cat of ['judge','prosecutor']) delete $(cat).dataset.chat;
+  $(id).dataset.chat = 'speaking';
+  $('pet-' + id).querySelector('.miau-bubble').textContent = line;
+  document.querySelectorAll('.speech').forEach(speech => speech.classList.toggle('is-speaking', speech.dataset.cat === id));
+  if ($('cat-caption').textContent !== 'A little miau-debate. A kinder way forward.') $('cat-caption').textContent = 'A little miau-debate. A kinder way forward.';
+  speakCat(id, false, 0, tone, line.includes('?'));
+ };
+ turns.forEach((line, index) => {
+  const wait = delay + index * .88;
+  if (wait === 0) turn(line); else debateTimers.push(setTimeout(() => turn(line), wait * 1000));
+ });
+ debateTimers.push(setTimeout(stopDebate, (delay + turns.length * .88) * 1000));
+}
+function clearVoice() {
+ voiceTimers.splice(0).forEach(clearTimeout);
+ for (const id of ['judge','prosecutor']) delete $(id).dataset.voice;
+}
+function speakCat(id, purr = false, delay = 0, tone = 1, question = false) {
+ clearVoice();
+ const cat = $(id);
+ const begin = () => { cat.dataset.voice = 'meow'; };
+ if (delay) voiceTimers.push(setTimeout(begin, delay * 1000)); else begin();
+ voiceTimers.push(setTimeout(() => { if (purr) cat.dataset.voice = 'purr'; else delete cat.dataset.voice; }, (delay + .73) * 1000));
+ if (purr) voiceTimers.push(setTimeout(() => { delete cat.dataset.voice; }, (delay + 1.7) * 1000));
+ catSound(id, purr, delay, tone, question);
+}
+function gavel() {
+ if (!soundEnabled) return;
+ try {
+  const ctx = audioContext; if (!ctx || ctx.state !== 'running') return;
+  const oscillator = ctx.createOscillator(), gain = ctx.createGain();
+  oscillator.type = 'triangle'; oscillator.frequency.setValueAtTime(180,ctx.currentTime); oscillator.frequency.exponentialRampToValueAtTime(55,ctx.currentTime + .09);
+  gain.gain.setValueAtTime(0,ctx.currentTime); gain.gain.linearRampToValueAtTime(.075,ctx.currentTime + .004); gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime + .15);
+  oscillator.connect(gain); gain.connect(soundOutput); oscillator.start(); oscillator.stop(ctx.currentTime + .16);
+  oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
+ } catch { /* Sound is decoration; the ruling must still succeed. */ }
+}
+function catSound(cat, purr = false, delay = 0, tone = 1, question = false) {
+ if (!soundEnabled || document.hidden || audioContext?.state !== 'running') return;
+ try {
+  catVoice?.(); // Repeated scritches replace the previous voice instead of getting louder.
+  const ctx = audioContext, start = ctx.currentTime + delay, pitch = (cat === 'judge' ? 1 : 1.22) * tone;
+  const voice = ctx.createOscillator(), mouth = ctx.createBiquadFilter(), nose = ctx.createBiquadFilter(), volume = ctx.createGain();
+  const nodes = [voice, mouth, nose, volume], sources = [voice];
+  // A voiced “mi-au”: rising pitch and two moving vowel resonances, then a soft fall.
+  // A small harmonic set softens the bright edge of a raw sawtooth on headphones.
+  voice.setPeriodicWave(ctx.createPeriodicWave(new Float32Array(6), Float32Array.of(0, 1, .5, .25, .12, .06)));
+  voice.frequency.setValueAtTime(440 * pitch, start);
+  voice.frequency.exponentialRampToValueAtTime(690 * pitch, start + .12);
+  voice.frequency.exponentialRampToValueAtTime(540 * pitch, start + .28);
+  voice.frequency.exponentialRampToValueAtTime((question ? 620 : 290) * pitch, start + .63);
+  for (const [filter, low, high, end] of [[mouth, 700, 1300, 480], [nose, 1900, 2300, 850]]) {
+   filter.type = 'bandpass'; filter.Q.value = 3;
+   filter.frequency.setValueAtTime(low * pitch, start);
+   filter.frequency.exponentialRampToValueAtTime(high * pitch, start + .2);
+   filter.frequency.exponentialRampToValueAtTime(end * pitch, start + .64);
+   voice.connect(filter); filter.connect(volume);
+  }
+  volume.gain.setValueAtTime(0, start);
+  volume.gain.linearRampToValueAtTime(.12, start + .055);
+  volume.gain.linearRampToValueAtTime(.09, start + .27);
+  volume.gain.exponentialRampToValueAtTime(.001, start + .68);
+  volume.gain.linearRampToValueAtTime(0, start + .72);
+  volume.connect(soundOutput); voice.start(start); voice.stop(start + .73);
+  if (purr) {
+   const rumble = ctx.createOscillator(), flutter = ctx.createOscillator(), depth = ctx.createGain(), pulse = ctx.createGain(), warmth = ctx.createGain();
+   nodes.push(rumble, flutter, depth, pulse, warmth); sources.push(rumble, flutter);
+   rumble.type = 'triangle'; rumble.frequency.value = 65 * pitch;
+   flutter.frequency.value = 24; depth.gain.value = .35; pulse.gain.value = .65;
+   flutter.connect(depth); depth.connect(pulse.gain);
+   warmth.gain.setValueAtTime(0, start + .6);
+   warmth.gain.linearRampToValueAtTime(.045, start + .8);
+   warmth.gain.linearRampToValueAtTime(0, start + 1.65);
+   rumble.connect(pulse); pulse.connect(warmth); warmth.connect(soundOutput);
+   for (const source of [rumble, flutter]) { source.start(start + .6); source.stop(start + 1.7); }
+  }
+  const cleanup = () => {
+   for (const source of sources) { try { source.stop(); } catch { /* Already ended. */ } }
+   nodes.forEach(node => node.disconnect());
+   if (catVoice === cleanup) catVoice = null;
+  };
+  catVoice = cleanup; sources.at(-1).onended = cleanup;
+ } catch { /* A quiet cat must never interrupt a task action. */ }
+}
+$('demo').hidden = !demo;
+for (const id of ['judge','prosecutor']) $('pet-' + id).addEventListener('click', event => {
+ stopDebate(); clearSneeze();
+ if (id === 'judge') clearTimeout(gavelTimer);
+ const cat = $(id), button = $('pet-' + id), previous = cat.dataset.pose;
+ clearTimeout(petTimers.get(id));
+ const resting = previous === 'sleep' || button.dataset.resting === 'true';
+ button.dataset.resting = String(resting);
+ const rect = button.getBoundingClientRect();
+ const x = event.detail ? Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)) : .5;
+ const y = event.detail ? Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height)) : .35;
+ cat.style.setProperty('--lean-x', `${(x - .5) * 14}px`);
+ cat.style.setProperty('--lean-angle', `${(x - .5) * 18}deg`);
+ button.querySelector('.pet-heart')?.remove();
+ const heart = document.createElement('span'); heart.className = 'pet-heart'; heart.textContent = '♥'; heart.setAttribute('aria-hidden','true');
+ heart.style.setProperty('--touch-x', `${x * 100}%`); heart.style.setProperty('--touch-y', `${y * 100}%`); button.append(heart);
+ cat.dataset.pose = ''; void cat.getBoundingClientRect(); cat.dataset.pose = 'pet';
+ petTimers.set(id, setTimeout(() => { heart.remove(); cat.dataset.pose = resting ? 'sleep' : 'listen'; delete button.dataset.resting; petTimers.delete(id); }, 1700));
+ $('cat-caption').textContent = id === 'judge' ? 'Miau! Purrmission granted. You may approach the fluff.' : 'Mrrp! Scritches accepted. Strictly for evidentiary purrposes.';
+ speakCat(id, true);
+});
+updateMotion();
+reducedMotion.addEventListener('change', updateMotion);
+document.addEventListener('visibilitychange', () => { document.documentElement.classList.toggle('away', document.hidden); if (document.hidden) { clearSneeze(); stopDebate(); } else scheduleSync(0); });
+$('motion').addEventListener('click', () => { motionPaused = !motionPaused; updateMotion(); });
+$('sound').addEventListener('click', async () => {
+ stopDebate();
+ $('sound').disabled = true;
+ try {
+  if (!soundEnabled) {
+   audioContext ||= new AudioContext();
+   if (!soundOutput) { soundOutput = audioContext.createGain(); soundOutput.connect(audioContext.destination); }
+   await audioContext.resume();
+  }
+  soundEnabled = !soundEnabled; $('sound').setAttribute('aria-pressed',String(soundEnabled)); $('sound').title = soundEnabled ? 'Turn cat sounds off' : 'Turn cat sounds on';
+  soundOutput.gain.value = soundEnabled ? 1 : 0;
+  if (soundEnabled) speakCat('judge');
+  else { clearTimeout(gavelTimer); catVoice?.(); sneezeStop?.(); }
+ } catch { notify('Sound is unavailable in this browser. The court will continue quietly.'); }
+ finally { $('sound').disabled = false; }
+});
+$('search').addEventListener('input', renderDocket);
+for (const mode of ['open','dismissed']) $(mode + '-filter').addEventListener('click', () => { filter = mode; renderDocket(); });
+function openPicker() {
+ if (busy || !ready || $('picker').open) return;
+ stopDebate(); scheduleSync(0);
+ filter = 'open'; $('search').value = ''; renderDocket();
+ $('picker-status').textContent = ''; $('picker').showModal(); $('search').focus();
+}
+for (const id of ['change-case','another','call-case']) $(id).addEventListener('click', openPicker);
+$('close-picker').addEventListener('click', () => { if (!busy) $('picker').close(); });
+$('picker').addEventListener('close', () => { if ($('picker-status').textContent) notify($('picker-status').textContent); });
+$('picker').addEventListener('cancel', event => { if (busy) event.preventDefault(); });
+$('picker').addEventListener('keydown', event => {
+ // Search inputs otherwise consume the first Escape to clear their text.
+ if (event.key === 'Escape') { event.preventDefault(); if (!busy) $('picker').close(); }
+});
+$('picker').addEventListener('click', event => {
+ const rect = $('picker').getBoundingClientRect();
+ if (!busy && event.target === $('picker') && (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom)) $('picker').close();
+});
+$('search').addEventListener('keydown', event => {
+ if (event.key === 'ArrowDown') { event.preventDefault(); $('cases').querySelector('button')?.focus(); }
+});
+$('cases').addEventListener('keydown', event => {
+ if (!['ArrowDown','ArrowUp','Home','End'].includes(event.key)) return;
+ const buttons = [...$('cases').querySelectorAll('button')], index = buttons.indexOf(document.activeElement);
+ if (index < 0) return;
+ event.preventDefault();
+ if (event.key === 'ArrowUp' && index === 0) { $('search').focus(); return; }
+ const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : Math.max(0, Math.min(buttons.length - 1, index + (event.key === 'ArrowDown' ? 1 : -1)));
+ buttons[next].focus();
+});
+document.querySelectorAll('[data-plea]').forEach(button => button.addEventListener('click', () => {
+ $('hearing-stage').classList.remove('opening');
+ const changed = plea && plea !== button.dataset.plea;
+ plea = button.dataset.plea;
+ document.querySelectorAll('[data-plea]').forEach(item => item.setAttribute('aria-pressed',String(item === button)));
+ $('observation').textContent = defenses[plea].quote; $('hear-verdict').disabled = false;
+ $('prosecution').textContent = prosecutionLines[plea];
+ poseCourt(plea);
+ if (changed && ++defenseChanges % 5 === 0 && !document.hidden && !document.documentElement.classList.contains('still')) sneeze();
+ else debate('defense');
+}));
+$('hear-verdict').addEventListener('click', () => {
+ if (!plea) return;
+ showHearingStage('ruling');
+ $('ruling-copy').textContent = defenses[plea].ruling;
+ $('ruling-kindness').textContent = { big:'One foothold is enough.', unclear:'A little clarity counts.', boring:'A small start. No enthusiasm required.', irrelevant:'You are allowed to let a leaf fall.' }[plea];
+ document.querySelectorAll('[data-defense-art]').forEach(art => { art.toggleAttribute('hidden', art.dataset.defenseArt !== plea); });
+ $('observation').textContent = '“Having considered the evidence, the court orders a little kindness.”';
+ $('prosecution').textContent = plea === 'irrelevant' ? '“The prosecution withdraws its objection. May I keep the folder?”' : '“The prosecution requests one manageable next step. And a biscuit.”';
+ poseCourt('consider'); debate('ruling');
+ document.querySelectorAll('[data-verdict]').forEach(button => {
+  const recommended = button.dataset.verdict === defenses[plea].recommendation;
+  button.classList.toggle('recommended', recommended); button.querySelector('.recommendation').hidden = !recommended;
+ }); focusHeading('ruling-title', 'judge-note');
+});
+$('back').addEventListener('click', () => {
+ showHearingStage('defense');
+ document.querySelector(`[data-plea="${plea}"]`).focus();
+ $('observation').textContent = defenses[plea].quote; poseCourt(plea);
+ $('prosecution').textContent = prosecutionLines[plea];
+});
+document.querySelector('[data-verdict="start"]').addEventListener('click', startCase);
+document.querySelector('[data-verdict="dismiss"]').addEventListener('click', dismissCase);
+document.querySelector('[data-verdict="shrink"]').addEventListener('click', () => { showHearingStage('shrink'); poseCourt('consider'); $('small-step').focus(); });
+$('cancel-shrink').addEventListener('click', () => { showHearingStage('ruling'); document.querySelector('[data-verdict="shrink"]').focus(); });
+$('shrink-form').addEventListener('submit', async event => {
+ event.preventDefault();
+ const title = $('small-step').value.trim();
+ if (!title) { $('small-step').setCustomValidity('A small step still needs a name.'); $('small-step').reportValidity(); return; }
+ await run(async () => {
+  const parent = await freshCase();
+  try { createdStepId = await api.addTask({ title, parentId:parent.id, timeEstimate:300000, isIgnoreShortSyntax:true }); }
+  catch { throw Error('The new step could not be confirmed. Check this task’s subtasks in the app before trying again, to avoid adding it twice.'); }
+  result('Sentence reduced', 'Small enough to start.', 'One five-minute subtask has been added. The original task and its other steps are still there. You can start this step now, or return to it later.', title);
+ });
+});
+$('small-step').addEventListener('input', () => $('small-step').setCustomValidity(''));
+$('start-step').addEventListener('click', () => run(async () => {
+ tasks = await getTasks();
+ const step = taskById(createdStepId);
+ if (!step || step.isDone) throw Error('That small step is no longer available. Check its status in Super Productivity.');
+ try { await api.dispatchAction({ type:'[Task] SetCurrentTask', id:step.id }); }
+ catch { throw Error('Your small step was saved, but the timer start could not be confirmed. Check the app’s timer before trying again.'); }
+ stepStarted = true; $('start-step').disabled = true; $('start-step').textContent = demo ? 'Demo start recorded ✓' : 'Timer start recorded ✓';
+ $('outcome-title').focus({ preventScroll:true }); // the focused button was just disabled
+ poseCourt('verdict'); settleForFocus();
+ $('outcome-copy').textContent = demo ? 'Demo ruling: your new step’s timer would now start. No real tasks have been changed.' : 'Your small step’s timer has been started. Stop it in Super Productivity whenever you’re ready; five minutes is a suggestion, not an automatic limit.';
+}));
+// Refresh only display data. Neither hooks nor retries ever change a task.
+function scheduleSync(delay = 120) {
+ clearTimeout(syncTimer); syncTimer = setTimeout(syncDocket, delay);
+}
+// The host fires dataChanged every second while a timer runs. The first change syncs
+// promptly; a stream of them reads at most every 2 s.
+let hookTimer = null, lastHookSync = -Infinity;
+function hookSync() {
+ if (hookTimer) return;
+ hookTimer = setTimeout(() => { hookTimer = null; lastHookSync = performance.now(); scheduleSync(0); }, Math.max(120, lastHookSync + 2000 - performance.now()));
+}
+function taskSnapshot(list) {
+ return JSON.stringify(list.map(task => [task.id, task.title, task.isDone, task.parentId, task.subTaskIds, task.timeEstimate]));
+}
+async function syncDocket() {
+ if (document.hidden) return;
+ if (busy || syncing) { syncPending = true; return; }
+ if (!ready) { syncPending = false; await initialize(); return; }
+ syncing = true; syncPending = false;
+ const epoch = dataEpoch;
+ let retry = false;
+ try {
+  const [latest, saved] = await Promise.all([getTasks(), api.loadSyncedData()]);
+  if (busy || epoch !== dataEpoch) { syncPending = true; return; }
+  const nextDismissed = readSaved(saved);
+  const changed = taskSnapshot(tasks) !== taskSnapshot(latest) || JSON.stringify(dismissed) !== JSON.stringify(nextDismissed);
+  tasks = latest; dismissed = nextDismissed;
+  if (syncError && [$('notice').textContent, $('picker-status').textContent].includes(syncError)) notify('');
+  syncError = '';
+  if (changed) renderDocket();
+  if (selectedId) {
+   const task = taskById(selectedId), unavailable = !eligible(task) || dismissed.includes(selectedId);
+   const wasCaseFocused = $('case-controls').contains(document.activeElement) || document.activeElement === $('start-step');
+   $('case-controls').disabled = unavailable;
+   if (unavailable && wasCaseFocused) ($('outcome').hidden ? $('change-case') : $('another')).focus({ preventScroll:true });
+   if (createdStepId) $('start-step').disabled = unavailable || stepStarted || !taskById(createdStepId) || taskById(createdStepId).isDone;
+   if (changed && eligible(task)) { updateEvidence(task); $('folder-title').textContent = task.title; }
+   const message = 'This case is no longer open. Your draft is kept; choose another case from the docket.';
+   if (unavailable && $('outcome').hidden) notify(message);
+   else if ([$('notice').textContent, $('picker-status').textContent].includes(message)) notify('');
+  } else if (changed) {
+   const empty = !topLevelTasks().some(task => !dismissed.includes(task.id));
+   if (($('judge').dataset.pose === 'sleep') !== empty) showWelcome();
+  }
+ } catch (error) {
+  if (busy || epoch !== dataEpoch) { syncPending = true; return; }
+  syncError = (error.message || 'The docket could not update.') + ' The court will retry automatically.';
+  notify(syncError); retry = true;
+ } finally {
+  syncing = false;
+  if (syncPending) scheduleSync(); else if (retry) scheduleSync(3000);
+ }
+}
+window.addEventListener('focus', () => scheduleSync(0));
+if (!demo) {
+ let polling;
+ const fallback = () => { polling ||= setInterval(() => scheduleSync(), 5000); };
+ if (api?.registerHook) {
+  for (const hook of ['dataChanged','persistedDataChanged']) {
+   Promise.resolve().then(() => api.registerHook(hook, hookSync)).catch(fallback);
+  }
+ } else fallback();
+}
+initialize();
+</script>
+</body>
+</html>

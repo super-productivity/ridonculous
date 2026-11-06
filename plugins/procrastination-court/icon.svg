@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="A ginger cat judge">
+ <path d="M12 29 10 9q11 1 18 11h8Q43 10 54 9l-2 20c7 17-3 29-20 29S5 46 12 29Z" fill="#efbf81" stroke="#805b43" stroke-width="2.5" stroke-linejoin="round"/>
+ <path d="m15 17 2 12 8-7m14 0 8 7 2-12" fill="#eaa6a0"/>
+ <path d="M23 23c-7-6-3-13 3-12 2-6 11-6 13 0 6-1 10 6 3 12" fill="#fff9eb" stroke="#cbb89a" stroke-width="1.5"/>
+ <ellipse cx="32" cy="44" rx="14" ry="10" fill="#fff0d9"/>
+ <g fill="#513e39"><ellipse cx="23" cy="35" rx="3.2" ry="4"/><ellipse cx="41" cy="35" rx="3.2" ry="4"/></g>
+ <g fill="#fff"><circle cx="22" cy="34" r="1"/><circle cx="40" cy="34" r="1"/></g>
+ <path d="M28 42q4-3 8 0l-4 4Z" fill="#bc777a"/>
+ <g fill="none" stroke="#805b43" stroke-width="1.8" stroke-linecap="round"><path d="M32 46q-3 5-6 0m6 0q3 5 6 0M8 39l8 2m-9 5 9-1m32-4 8-2m-8 6 9 1"/></g>
+</svg>

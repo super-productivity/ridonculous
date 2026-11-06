@@ -17,6 +17,8 @@ These are playground projects, with no promise of ongoing maintenance or compati
 
 ## Experiments
 
+**[Procrastination Cat Court](plugins/procrastination-court/)** — put an avoided task before Hon. Justice Later and Prosecutor Pounce, two animated, pettable courtroom kittens. Make your defense, then start the task, add one tiny first step, or dismiss its case without changing the task. A courtroom using Super Productivity’s standard UI kit and theme colors, with a searchable case picker, standalone demo, optional meows, purrs and gavel sound, and a reopenable docket.
+
 **[Daily Quest](plugins/daily-quest/)** — an adventure map from a buff to your final boss task to a recovery break, with the boss's subtasks as steps along the trail, an optional side-quest stash branching off it, and a searchable task picker, using Super Productivity’s standard UI kit. Includes a standalone demo and a local live-app test setup. Video coming when it exists.
 
 **[Stadium Mode](plugins/stadium-mode/)**: a roaring crowd and a booming stadium announcer for your task list. Kick off when you start a task, "GOAL!" when you finish one, hat tricks for quick streaks, "ooooh" for rescheduling, red cards for deletions, and a final whistle with the day's score at Finish Day. All sound is synthesized in the app, and the plugin ships no audio files. An optional neural announcer voice (Kokoro, through a stadium PA) downloads about 110 MB after you confirm; otherwise it makes no network requests. Video coming when it exists.

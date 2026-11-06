@@ -1,0 +1,14 @@
+{
+  "id": "ridonculous-procrastination-court",
+  "name": "Cat Court",
+  "version": "0.1.0",
+  "description": "A kindly ridiculous court for the task you have been avoiding. Start it, shrink it, or let the case rest.",
+  "manifestVersion": 1,
+  "minSupVersion": "19.3.1",
+  "iFrame": true,
+  "uiKit": true,
+  "icon": "icon.svg",
+  "hooks": ["dataChanged", "persistedDataChanged"],
+  "permissions": ["getTasks", "addTask", "dispatchAction", "loadSyncedData", "persistDataSynced"],
+  "dataSharing": []
+}

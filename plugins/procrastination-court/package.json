@@ -1,0 +1,7 @@
+{
+  "name": "ridonculous-procrastination-court",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": { "test": "node tests/browser.cjs", "test:live": "node tests/live.cjs" },
+  "devDependencies": { "playwright": "1.61.1" }
+}
