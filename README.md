@@ -23,6 +23,10 @@ These are playground projects, with no promise of ongoing maintenance or compati
 
 **[Stadium Mode](plugins/stadium-mode/)**: a roaring crowd and a booming stadium announcer for your task list. Kick off when you start a task, "GOAL!" when you finish one, hat tricks for quick streaks, "ooooh" for rescheduling, red cards for deletions, and a final whistle with the day's score at Finish Day. All sound is synthesized in the app, and the plugin ships no audio files. An optional neural announcer voice (Kokoro, through a stadium PA) downloads about 110 MB after you confirm; otherwise it makes no network requests. Video coming when it exists.
 
+## Future experiments
+
+**Task Aquarium — recorded for a future build, not implemented.** Completed tasks become fish; focused time grows the scenery. Your workday leaves a tiny living souvenir. Aim for a lovingly animated, peaceful aquarium that feels rewarding to visit. Start with one tank, a fish on task completion, and a small amount of scenery growth from tracked focus time. Video moment: an empty tank becoming a lively little world over a workday.
+
 ## Test plugins in the real app
 
 The launcher serves a local Super Productivity web build, opens a dedicated Chromium profile, installs the selected plugin ZIP, and opens its view (background-only plugins such as Stadium Mode have no view; they run once enabled). It does not modify the Super Productivity checkout. This is the real app and plugin bridge, not the standalone demo.
