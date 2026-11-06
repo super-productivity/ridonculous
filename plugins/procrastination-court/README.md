@@ -48,7 +48,7 @@ Sound starts off; the speaker icon enables locally synthesized meows, purrs, and
 - Reads tasks via `getTasks`. Only explicit rulings write: `addTask` for a small step, and the allowed `[Task] SetCurrentTask` action to start a timer.
 - Syncs only a version number and dismissed task IDs via `persistDataSynced`. A tab-local session-storage flag (no task data) enables the “Welcome back” greeting. No plugin code makes network requests.
 - The docket updates through the host's `dataChanged` and `persistedDataChanged` hooks (a steady stream, such as from a running timer, is read at most every 2 seconds), when the view regains focus or becomes visible again, and when the picker opens. If hook registration is unavailable, it polls every 5 seconds instead. Updates only read data and keep your current defense and draft.
-- Before each ruling, the task is read again: a task completed, removed, or moved under another task cannot receive it. A case dismissed elsewhere is disabled at the next docket update.
+- Before each ruling or reopening, the task and docket are read again: a task completed, removed, moved under another task, or dismissed elsewhere cannot receive a ruling, and a finished task's case cannot be reopened.
 - Controls are disabled while an action runs. A failed write is reported without a successful ruling; no write is retried automatically. A saved small step is kept even if starting its timer fails.
 - Invalid saved docket data blocks the court rather than being silently overwritten.
 
@@ -69,7 +69,7 @@ npm run test:live -- procrastination-court /path/to/super-productivity
 
 Verified on 2026-11-06:
 
-- **Browser tests:** search, keyboard picker, and focus restoration; all three rulings, including starting the next unfinished child and literal subtask titles; duplicate-submission prevention; dismissal and reopening; failed reads and writes, stale tasks, and invalid saved data; HTML-like titles rendered as text; live updates that keep drafts and focus, with hook bursts throttled; reduced motion and the motion toggle; no horizontal overflow from 280 to 1280px; and a standalone demo with no HTTP requests.
+- **Browser tests:** search, keyboard picker, and focus restoration; all three rulings, including starting the next unfinished child and literal subtask titles; duplicate-submission prevention; dismissal and reopening, including cases dismissed elsewhere and finished tasks; failed reads and writes, stale tasks, and invalid saved data; HTML-like titles rendered as text; live updates that keep drafts and focus, with hook bursts throttled; reduced motion and the motion toggle; no horizontal overflow from 280 to 1280px; and a standalone demo with no HTTP requests.
 - **Sound:** silent by default, voices replace rather than overlap, mute is immediate, and nothing writes task data. Offline renders check that each sound is audible, bounded, and unclipped (measured cat peaks about 0.083, gavel 0.074). The suite writes `procrastination-court-sounds.wav` to the system temp directory for listening.
 - **Real 19.3.1 web build:** ZIP installation and reinstallation, UI kit injection, live light/dark changes, new tasks appearing through hooks, subtask creation with a 5-minute estimate, tracked time increasing from both start actions, and dismissal surviving a reload.
 - **Screenshots inspected:** desktop and mobile hearing, verdict, focus, and empty screens, and the icon in the real app menu in light and dark themes. Tests write `procrastination-court-*.png` screenshots to the system temp directory.

@@ -688,10 +688,13 @@ function nextTask(task) {
  if (!(task.subTaskIds || []).length) return task;
  return task.subTaskIds.map(taskById).find(child => child && child.parentId === task.id && !child.isDone);
 }
-async function freshCase() {
- tasks = await getTasks(); renderDocket();
+// Re-read tasks and the docket before every ruling: another device may have changed either.
+async function freshCase(allowDismissed = false) {
+ const [latest, saved] = await Promise.all([getTasks(), api.loadSyncedData()]);
+ tasks = latest; dismissed = readSaved(saved); renderDocket();
  const task = taskById(selectedId);
  if (!eligible(task)) throw Error('This task was completed, removed, or moved under another task. Choose another case from the docket.');
+ if (!allowDismissed && dismissed.includes(task.id)) throw Error('This case was dismissed in the meantime. Reopen it from the Dismissed docket to continue.');
  updateEvidence(task); return task;
 }
 async function run(action) {
@@ -768,18 +771,18 @@ async function saveDismissed(next) {
 }
 async function dismissCase() {
  await run(async () => {
-  await freshCase();
-  // Re-read before saving to preserve other devices' already-synced dismissals.
-  const latest = readSaved(await api.loadSyncedData());
-  await saveDismissed([...new Set([...latest, selectedId])]);
+  await freshCase(true); // also refreshes the docket, preserving other devices' dismissals
+  await saveDismissed([...new Set([...dismissed, selectedId])]);
   result('Case dismissed', 'You may put this down.', 'This case is resting in the Dismissed docket. Your task is still in Super Productivity, exactly as it was. You can reopen the case any time.');
  });
 }
 async function reopen(id) {
  let reopened = false;
  await run(async () => {
-  const latest = readSaved(await api.loadSyncedData());
-  await saveDismissed(latest.filter(value => value !== id)); reopened = true;
+  const [latest, saved] = await Promise.all([getTasks(), api.loadSyncedData()]);
+  tasks = latest;
+  if (!eligible(taskById(id))) { renderDocket(); throw Error('This task was completed, removed, or moved under another task, so its case can’t be reopened.'); }
+  await saveDismissed(readSaved(saved).filter(value => value !== id)); reopened = true;
  });
  if (reopened) { filter = 'open'; selectCase(id); }
 }
@@ -1035,7 +1038,7 @@ $('shrink-form').addEventListener('submit', async event => {
 });
 $('small-step').addEventListener('input', () => $('small-step').setCustomValidity(''));
 $('start-step').addEventListener('click', () => run(async () => {
- tasks = await getTasks();
+ await freshCase();
  const step = taskById(createdStepId);
  if (!step || step.isDone) throw Error('That small step is no longer available. Check its status in Super Productivity.');
  try { await api.dispatchAction({ type:'[Task] SetCurrentTask', id:step.id }); }

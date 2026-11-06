@@ -399,6 +399,50 @@ const url = pathToFileURL(path.resolve(__dirname, '../index.html')).href;
     await openPicker(); await page.locator('#dismissed-filter').click(); await page.locator('[data-task-id="a"]').click();
     assert.equal(await page.locator('#judge').getAttribute('data-pose'), 'welcome');
 
+    // A case dismissed on another device before the docket refreshes receives no ruling.
+    // Each change and click happens in one step so no background refresh can slip in between.
+    const dismissElsewhereAndClick = selector => page.evaluate(selector => {
+      fixture.saved = JSON.stringify({ version: 1, dismissed: ['c'] }); document.querySelector(selector).click();
+    }, selector);
+    // The refusal is followed by the docket's steady "no longer open" notice, which is what we wait for.
+    const refusedAsDismissed = async () => {
+      await page.locator('#notice').getByText('no longer open', { exact: false }).waitFor();
+      assert.equal(await page.locator('#outcome').isVisible(), false);
+      assert.deepEqual(await page.evaluate(() => [fixture.actions, fixture.adds]), [[], []], 'No task write for a case dismissed elsewhere');
+    };
+    await reset(); await pick('c'); await rule('big');
+    await dismissElsewhereAndClick('[data-verdict="start"]');
+    await refusedAsDismissed();
+    await reset(); await pick('c'); await rule('big');
+    await page.locator('[data-verdict="shrink"]').click();
+    await page.locator('#small-step').fill('Look up the number');
+    await dismissElsewhereAndClick('#shrink-form button[type="submit"]');
+    await refusedAsDismissed();
+    assert.equal(await page.locator('#small-step').inputValue(), 'Look up the number', 'The draft is kept');
+    // A new small step cannot be started once its case was dismissed elsewhere.
+    await reset(); await pick('c'); await rule('big');
+    await page.locator('[data-verdict="shrink"]').click();
+    await page.locator('#small-step').fill('Look up the number');
+    await page.locator('#shrink-form button[type="submit"]').click();
+    await page.locator('#start-step').waitFor();
+    await dismissElsewhereAndClick('#start-step');
+    await page.waitForFunction(() => !busy && document.querySelector('#notice').textContent.includes('dismissed in the meantime'));
+    assert.deepEqual(await page.evaluate(() => fixture.actions), [], 'No timer start for a dismissed case');
+    // Dismissing a case that was already dismissed elsewhere simply succeeds.
+    await reset(); await pick('c'); await rule('irrelevant');
+    await dismissElsewhereAndClick('[data-verdict="dismiss"]');
+    await page.locator('#outcome').waitFor();
+    assert.deepEqual(await page.evaluate(() => JSON.parse(fixture.saved).dismissed), ['c']);
+    // Reopening a case whose task finished elsewhere explains why and leaves the docket unchanged.
+    await reset();
+    await page.evaluate(() => { fixture.saved = JSON.stringify({ version: 1, dismissed: ['c'] }); });
+    await refresh(); await openPicker(); await page.locator('#dismissed-filter').click();
+    await page.locator('[data-task-id="c"]').waitFor();
+    await page.evaluate(() => { fixture.tasks.find(task => task.id === 'c').isDone = true; document.querySelector('[data-task-id="c"]').click(); });
+    await page.locator('#picker-status').getByText('can’t be reopened', { exact: false }).waitFor();
+    assert.deepEqual(await page.evaluate(() => JSON.parse(fixture.saved).dismissed), ['c'], 'A failed reopen keeps the docket');
+    await page.keyboard.press('Escape');
+
 
     // Long and untrusted titles remain text. Check each stage across narrow and wide views.
     await reset();
