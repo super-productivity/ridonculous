@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Mochi the desk pet">
+ <path d="M9 52C9 24 20 14 32 14S55 24 55 52Q55 58 49 58H15Q9 58 9 52Z" fill="#fffaf0"/>
+ <path d="M9 49Q32 55 55 49V52Q55 58 49 58H15Q9 58 9 52Z" fill="#f8bbd0"/>
+ <path d="M9 52C9 24 20 14 32 14S55 24 55 52Q55 58 49 58H15Q9 58 9 52Z" fill="none" stroke="#37474f" stroke-width="2.5" stroke-linejoin="round"/>
+ <path d="M20 37q4-4 8 0M36 37q4-4 8 0M29 43q3 3 6 0" fill="none" stroke="#263238" stroke-width="2.5" stroke-linecap="round"/>
+ <ellipse cx="18" cy="44" rx="3.5" ry="2.2" fill="#f48fb1" opacity=".6"/><ellipse cx="46" cy="44" rx="3.5" ry="2.2" fill="#f48fb1" opacity=".6"/>
+</svg>

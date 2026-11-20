@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desk Pet demo</title>
+<style>
+  body { font-family: sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #263238; }
+  select, button { font: inherit; padding: 6px 10px; margin: 4px 0; }
+</style>
+</head>
+<body>
+<!-- Standalone demo with pretend tasks; not part of the installed plugin. Mochi appears bottom right. -->
+<main id="demo" hidden>
+  <h1>Desk Pet demo</h1>
+  <p>Mochi floats in the bottom-right corner, as on every page of Super Productivity. Hover, click or drag them.</p>
+  <label for="scenario">Pick a day:</label>
+  <select id="scenario">
+    <option value="hungry">Nothing finished yet today</option>
+    <option value="content">Two tasks done</option>
+    <option value="overjoyed">Five tasks done</option>
+    <option value="grumpy">Three tasks overdue</option>
+    <option value="sulking">Ignored for a week</option>
+  </select>
+  <button id="feed">Finish a demo task</button>
+</main>
+<script>
+// Tests inject their own PluginAPI before this runs; otherwise fake one from the chosen scenario.
+if (!window.PluginAPI) {
+  const DAY_MS = 86400000;
+  const hooks = {};
+  let extra = 0;
+  const day = ts => new Date(ts).toISOString().slice(0, 10);
+  const done = (n, ago) => Array.from({ length: n }, (_, i) => ({ id: `d${ago}-${i}`, isDone: true, doneOn: Date.now() - ago * DAY_MS - i * 60000 }));
+  const late = n => Array.from({ length: n }, (_, i) => ({ id: `o${i}`, isDone: false, dueDay: day(Date.now() - 2 * DAY_MS) }));
+  const scenarios = { hungry: () => done(3, 1), content: () => done(2, 0), overjoyed: () => done(5, 0), grumpy: () => [...done(1, 0), ...late(3)], sulking: () => done(2, 7) };
+  const tasks = () => [...scenarios[document.getElementById('scenario').value](), ...done(extra, 0).map(t => ({ ...t, id: `x${t.id}` }))];
+  window.PluginAPI = {
+    Hooks: { DATA_CHANGED: 'dataChanged', DAY_CHANGE: 'dayChange' },
+    registerHook: (name, cb) => { hooks[name] = cb; },
+    registerHeaderButton: () => {},
+    onUnload: () => {},
+    getTasks: async () => tasks(),
+    getArchivedTasks: async () => [],
+    getDayContext: async () => {
+      const d = new Date();
+      return { todayStr: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`, startOfNextDayDiffMs: 0 };
+    },
+  };
+  // Switching scenario restarts the page, so Mochi doesn't treat a different pretend history as a snack.
+  const picked = new URLSearchParams(location.search).get('scenario');
+  if (Object.hasOwn(scenarios, picked ?? '')) document.getElementById('scenario').value = picked;
+  document.getElementById('demo').hidden = false;
+  document.getElementById('scenario').addEventListener('change', event => { location.replace(`?scenario=${event.target.value}`); });
+  document.getElementById('feed').addEventListener('click', () => { extra++; hooks.dataChanged(); });
+}
+</script>
+<script src="plugin.js"></script>
+</body>
+</html>

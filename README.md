@@ -21,6 +21,8 @@ These are playground projects, with no promise of ongoing maintenance or compati
 
 **[Daily Quest](plugins/daily-quest/)** — an adventure map from a buff to your final boss task to a recovery break, with the boss's subtasks as steps along the trail, an optional side-quest stash branching off it, and a searchable task picker, using Super Productivity’s standard UI kit. Includes a standalone demo and a local live-app test setup. Video coming when it exists.
 
+**[Desk Pet](plugins/desk-pet/)**: Mochi, a little rice cake who floats in the corner of every Super Productivity page. Finished tasks feed them, overdue tasks make them grumpy, and after three days without a finished task they melt into a sad puddle. Read-only, pettable and draggable; Mochi squishes, munches, bounces and huffs, and their speech bubble and dusted base follow the app's theme. Putting Mochi on every page is an unofficial hack that a future app update could break. Includes a standalone demo. Video coming when it exists.
+
 **[Stadium Mode](plugins/stadium-mode/)**: a roaring crowd and a booming stadium announcer for your task list. Kick off when you start a task, "GOAL!" when you finish one, hat tricks for quick streaks, "ooooh" for rescheduling, red cards for deletions, and a final whistle with the day's score at Finish Day. All sound is synthesized in the app, and the plugin ships no audio files. An optional neural announcer voice (Kokoro, through a stadium PA) downloads about 110 MB after you confirm; otherwise it makes no network requests. Video coming when it exists.
 
 ## Future experiments

@@ -1,0 +1,13 @@
+{
+  "id": "ridonculous-desk-pet",
+  "name": "Desk Pet",
+  "version": "0.3.0",
+  "description": "Mochi, a little rice cake floating on every page who is fed by finished tasks, grumpy about overdue ones, and sulks when ignored.",
+  "manifestVersion": 1,
+  "minSupVersion": "20.0.0",
+  "iFrame": false,
+  "icon": "icon.svg",
+  "hooks": ["dataChanged", "dayChange"],
+  "permissions": ["getTasks", "getArchivedTasks", "getDayContext", "registerHeaderButton"],
+  "dataSharing": []
+}
